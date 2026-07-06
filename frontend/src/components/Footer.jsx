@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
-import { LOGO_URL } from "@/lib/api";
-import { Github, Mail, Heart, Linkedin, Instagram, Code2 } from "lucide-react";
+import { LOGO_URL, DEV_PHOTO_URL } from "@/lib/api";
+import { Github, Mail, Heart, Linkedin, Instagram } from "lucide-react";
 
 export default function Footer() {
   const loc = useLocation();
@@ -9,11 +9,20 @@ export default function Footer() {
     <footer className="relative z-10 mt-32 border-t border-white/5" data-testid="footer">
       {/* Developer credit card */}
       <div className="mx-auto max-w-6xl px-6 pt-14">
-        <div className="card-glass p-8 md:p-10 flex flex-col md:flex-row items-start md:items-center gap-6" data-testid="developer-credit">
-          <div className="w-16 h-16 shrink-0 rounded-2xl bg-[#00E5D4]/10 border border-[#00E5D4]/30 flex items-center justify-center animate-pulse-glow">
-            <Code2 className="w-8 h-8 text-[#00E5D4]" />
+        <div
+          className="card-glass p-8 md:p-10 flex flex-col md:flex-row items-center md:items-center gap-8"
+          data-testid="developer-credit"
+        >
+          <div className="relative shrink-0">
+            <div className="absolute inset-0 bg-[#00E5D4]/30 blur-2xl rounded-full scale-110" />
+            <img
+              src={DEV_PHOTO_URL}
+              alt="Adesh Yash"
+              className="relative w-32 h-32 md:w-36 md:h-36 rounded-full object-cover border-2 border-[#00E5D4]/60 shadow-[0_0_30px_rgba(0,229,212,0.45)]"
+              data-testid="dev-photo"
+            />
           </div>
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 text-center md:text-left">
             <div className="chip mb-2">Built by</div>
             <h3 className="font-display text-2xl md:text-3xl font-bold">
               Adesh <span className="text-[#00E5D4]">Yash</span>
@@ -21,7 +30,7 @@ export default function Footer() {
             <p className="text-sm text-[#B0B8C5] mt-1">
               Founder · Content Manager · Lead Developer
             </p>
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-4 flex flex-wrap gap-2 justify-center md:justify-start">
               <a
                 href="https://www.linkedin.com/in/adesh-yash-624a87383/"
                 target="_blank"
@@ -55,8 +64,8 @@ export default function Footer() {
       <div className="mx-auto max-w-6xl px-6 py-12 grid gap-10 md:grid-cols-4">
         <div className="md:col-span-2">
           <div className="flex items-center gap-3">
-            <img src={LOGO_URL} alt="BITVERSE" className="w-16 h-16 logo-glow object-contain" />
-            <span className="font-display text-xl font-bold tracking-wider">
+            <img src={LOGO_URL} alt="BITVERSE" className="w-20 h-20 logo-glow object-contain" />
+            <span className="font-display text-2xl font-bold tracking-wider">
               BIT<span className="text-[#00E5D4]">VERSE</span>
             </span>
           </div>
