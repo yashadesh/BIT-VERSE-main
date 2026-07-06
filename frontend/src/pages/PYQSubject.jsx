@@ -32,7 +32,7 @@ export default function PYQSubject() {
         <ArrowLeft className="w-4 h-4" /> Back
       </Link>
       <PageHeader
-        chip={subject ? `Semester ${subject.semester}` : ""}
+        chip={subject ? `Semester ${subject.semester}${subject.semester === 1 ? " (C)" : " (P)"}` : ""}
         title={subject ? <>{subject.name} <span className="text-[#00E5D4]">— PYQs</span></> : "Loading…"}
         subtitle="Pick a paper set below."
         testid="pyq-subject-header"

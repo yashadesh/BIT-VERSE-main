@@ -35,7 +35,7 @@ export default function PYQsHub() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-display font-semibold truncate">{s.name}</div>
-              <div className="text-xs font-mono text-white/50 mt-0.5">Semester {s.semester}</div>
+              <div className="text-xs font-mono text-white/50 mt-0.5">Semester {s.semester}{s.semester === 1 ? " (C)" : " (P)"}</div>
             </div>
             <ChevronRight className="w-5 h-5 text-white/40 group-hover:text-[#00E5D4] group-hover:translate-x-1 transition" />
           </Link>

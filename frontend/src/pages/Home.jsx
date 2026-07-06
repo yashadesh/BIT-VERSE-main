@@ -63,11 +63,12 @@ export default function Home() {
         </div>
 
         <div className="relative animate-fade-up" style={{ animationDelay: "0.1s" }}>
-          <div className="absolute inset-0 blur-3xl bg-[#00E5D4]/20 rounded-full scale-125" />
+          <div className="absolute inset-0 blur-3xl bg-[#00E5D4]/25 rounded-full scale-125" />
           <img
             src={LOGO_URL}
-            alt="BITVERSE"
-            className="relative w-32 h-32 md:w-40 md:h-40 logo-glow animate-pulse-glow rounded-2xl"
+            alt="BITVERSE — Student Notes Library"
+            className="relative w-56 h-56 md:w-72 md:h-72 logo-glow animate-pulse-glow object-contain"
+            data-testid="hero-logo"
           />
         </div>
 

@@ -5,13 +5,13 @@ import PageHeader from "@/components/PageHeader";
 const semesters = [
   {
     n: 1,
-    title: "Semester 1",
+    title: "Semester 1 (C)",
     subtitle: "Foundation semester — Chemistry, Maths-I, Electronics, Mechanical & more.",
     count: 10,
   },
   {
     n: 2,
-    title: "Semester 2",
+    title: "Semester 2 (P)",
     subtitle: "Programming, Physics, Electrical, Maths-II and Communication skills.",
     count: 10,
   },

@@ -41,8 +41,8 @@ export default function SemesterPage() {
   return (
     <div className="page-enter mx-auto max-w-6xl px-6 pt-28 md:pt-32">
       <PageHeader
-        chip={`Semester ${sem}`}
-        title={<>First Year · <span className="text-[#00E5D4]">Semester {sem}</span></>}
+        chip={`Semester ${sem}${sem === "1" ? " (C)" : " (P)"}`}
+        title={<>First Year · <span className="text-[#00E5D4]">Semester {sem}{sem === "1" ? " (C)" : " (P)"}</span></>}
         subtitle="Tap any subject to explore modules and files."
         testid="semester-header"
       />

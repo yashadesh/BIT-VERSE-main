@@ -46,7 +46,6 @@ export default function ModulePage() {
           <div className="card-glass p-12 flex flex-col items-center gap-3 text-center">
             <FileX2 className="w-10 h-10 text-[#00E5D4]/60" />
             <p className="text-white/70">No files here yet.</p>
-            <Link to="/admin" className="btn-neon" data-testid="empty-upload-admin">Upload via Admin</Link>
           </div>
         )}
       </div>

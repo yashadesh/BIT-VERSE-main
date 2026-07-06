@@ -14,7 +14,7 @@ function SyllabusCard({ n, subs, files }) {
         </div>
         <span className="chip">{credits} Credits</span>
       </div>
-      <h3 className="font-display text-2xl md:text-3xl font-bold mt-5">Semester {n}</h3>
+      <h3 className="font-display text-2xl md:text-3xl font-bold mt-5">Semester {n}{n === 1 ? " (C)" : " (P)"}</h3>
       <ul className="mt-4 space-y-2">
         {subs.map((s) => (
           <li key={s.id} className="flex items-center justify-between text-sm text-white/80 border-b border-white/5 pb-2">
