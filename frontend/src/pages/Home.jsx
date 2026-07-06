@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, LOGO_URL } from "@/lib/api";
+import TrendingChart from "@/components/TrendingChart";
 import {
   BookOpen, FileText, ScrollText, Youtube, ArrowRight, Sparkles,
   BookMarked, GraduationCap, Zap, Rocket,
@@ -157,6 +158,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* LIVE TRENDING CHART */}
+      <TrendingChart />
 
       {/* HIGHLIGHT STRIP */}
       <section className="relative px-6 py-16" data-testid="highlight-strip">
