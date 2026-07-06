@@ -98,8 +98,8 @@ export default function TrendingChart() {
         </div>
 
         <div className="card-glass p-4 md:p-8" data-testid="trending-chart-card">
-          <div className="w-full" style={{ height: 360 }}>
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="w-full" style={{ height: 360, minHeight: 360, minWidth: 320 }}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={320} minHeight={360}>
               <BarChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 55 }} key={tick}>
                 <defs>
                   <linearGradient id="bar-cyan" x1="0" y1="0" x2="0" y2="1">
