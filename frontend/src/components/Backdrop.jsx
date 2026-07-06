@@ -1,20 +1,36 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
-/* Background layers: aurora + starfield + floating triangles + grid + mouse spotlight */
+const isTouchDevice = () =>
+  typeof window !== "undefined" &&
+  (("ontouchstart" in window) || navigator.maxTouchPoints > 0);
+
+/* Background layers: aurora + starfield + floating triangles + grid + mouse spotlight
+   Mobile-optimized: fewer particles, no mouse follow on touch devices */
 export default function Backdrop() {
   const spotRef = useRef(null);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768 || isTouchDevice());
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  useEffect(() => {
+    if (isMobile) return; // no spotlight on mobile/touch — saves CPU
     const onMove = (e) => {
       if (!spotRef.current) return;
       spotRef.current.style.background = `radial-gradient(400px circle at ${e.clientX}px ${e.clientY}px, rgba(0,229,212,0.10), transparent 60%)`;
     };
     window.addEventListener("mousemove", onMove);
     return () => window.removeEventListener("mousemove", onMove);
-  }, []);
+  }, [isMobile]);
 
-  const stars = Array.from({ length: 90 });
-  const tris = Array.from({ length: 14 });
+  const starCount = isMobile ? 25 : 90;
+  const triCount = isMobile ? 0 : 14;
+  const stars = Array.from({ length: starCount });
+  const tris = Array.from({ length: triCount });
 
   return (
     <>
@@ -50,11 +66,13 @@ export default function Backdrop() {
           />
         ))}
       </div>
-      <div
-        ref={spotRef}
-        className="fixed inset-0 z-0 pointer-events-none"
-        aria-hidden="true"
-      />
+      {!isMobile && (
+        <div
+          ref={spotRef}
+          className="fixed inset-0 z-0 pointer-events-none"
+          aria-hidden="true"
+        />
+      )}
     </>
   );
 }

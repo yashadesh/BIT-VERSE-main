@@ -157,6 +157,29 @@ body {
   filter: drop-shadow(0 0 24px rgba(0, 229, 212, 0.55)) drop-shadow(0 0 60px rgba(0, 184, 255, 0.3));
 }
 
+/* Frame around logo so its black background reads against dark site */
+.logo-frame {
+  padding: 6px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(0,229,212,0.18), rgba(0,184,255,0.10));
+  border: 1px solid rgba(0, 229, 212, 0.45);
+  box-shadow: 0 0 22px rgba(0, 229, 212, 0.35), inset 0 0 12px rgba(0,229,212,0.08);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.logo-frame img { display: block; }
+
+/* Reduced motion / mobile: kill expensive animations */
+@media (max-width: 767px) {
+  .starfield .tri { display: none; }
+  .aurora { filter: blur(30px); opacity: 0.7; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse-glow, .animate-twinkle, .animate-fade-up { animation: none !important; }
+  .starfield { display: none; }
+}
+
 /* Magnetic button */
 .btn-neon {
   position: relative;

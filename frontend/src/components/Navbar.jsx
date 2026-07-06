@@ -22,11 +22,13 @@ export default function Navbar() {
       <div className="mx-auto mt-4 max-w-6xl px-6">
         <nav className="glass rounded-2xl px-5 py-3 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3 group" data-testid="nav-logo">
-            <img
-              src={LOGO_URL}
-              alt="BITVERSE"
-              className="w-16 h-16 logo-glow object-contain shrink-0"
-            />
+            <span className="logo-frame">
+              <img
+                src={LOGO_URL}
+                alt="BITVERSE"
+                className="w-11 h-11 object-contain block"
+              />
+            </span>
             <span className="font-display text-lg font-bold tracking-wider">
               BIT<span className="text-[#00E5D4]">VERSE</span>
             </span>

@@ -20,11 +20,13 @@ export default function About() {
 
       <div className="mt-12 grid gap-8 md:grid-cols-2">
         <div className="card-glass p-8 md:p-10 flex flex-col items-start gap-6">
-          <img
-            src={LOGO_URL}
-            alt="BITVERSE — Student Notes Library"
-            className="w-40 h-40 md:w-48 md:h-48 logo-glow object-contain"
-          />
+          <span className="logo-frame">
+            <img
+              src={LOGO_URL}
+              alt="BITVERSE — Student Notes Library"
+              className="w-36 h-36 md:w-44 md:h-44 object-contain block"
+            />
+          </span>
           <p className="text-[#B0B8C5] leading-relaxed">
             BITVERSE provides organized notes, previous year papers, syllabi, and academic
             resources — all in one beautiful and easy-to-use platform. Semester-wise

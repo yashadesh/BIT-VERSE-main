@@ -1,0 +1,41 @@
+{
+  "summary": "Frontend-only regression for iteration 4 focused on (1) BITVERSE logo visibility with new cyan .logo-frame wrapper across Navbar/Home/About/Footer/Viewer, (2) Adesh Yash profile picture rendering on About 'Meet the Developer' section and Footer developer credit card, (3) mobile performance backdrop (starfield=25, tris=0, no spotlight on mobile), (4) PDF viewer using Google Docs Viewer (gview) on mobile and raw iframe on desktop. All 10 checks passed on both mobile (390x844) and desktop (1440x900).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Global (any page)", "issues": ["Non-blocking React hydration warning: '<span> cannot be a child of <option>' — appears from a select/option rendering somewhere; single console warning, does not affect functionality."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Optional: investigate the hydration warning about <span> child of <option> — likely a shadcn Select where a <span> icon is nested inside a native <option>; low priority."
+  ],
+  "critical_code_review_comments": [
+    "Viewer.jsx correctly branches between mobile (gview) and desktop (raw) using UA + width check — works well.",
+    "Backdrop.jsx uses window.innerWidth < 768 || isTouchDevice() as isMobile; correctly reduces star count to 25 and triCount to 0 on mobile, and skips spotlight div. Confirmed visually.",
+    "index.css .logo-frame class provides cyan border + glow — makes the black-background PNG logo readable against dark theme; verified via screenshots on all pages.",
+    "About.jsx and Footer.jsx both consume DEV_PHOTO_URL for Adesh Yash's photo; the same image (naturalWidth=1260) loads correctly on both."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped)", "frontend": "100%"},
+  "seed_data_creation": "None — used existing PDF file 9c1c523f-9181-4724-ac97-7fe548e637b6 (PH24101_Module5_NuclearPhysics_ARoy.pdf) from previous iteration for viewer tests.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All logo/profile-photo/mobile-perf/PDF-viewer changes from iteration 4 are verified. Mobile viewport must be exactly 390x844 for the media query + JS isMobile checks to kick in. Existing PDF file id used: 9c1c523f-9181-4724-ac97-7fe548e637b6. Google Docs Viewer (docs.google.com/gview?url=<encoded>&embedded=true) is used on mobile viewer — gview requires the raw file URL to be publicly accessible; it is.",
+  "verified_checks": {
+    "mobile_home_hero_logo": "clientWidth=192 (>=180), naturalWidth=500, complete=true, wrapped in .logo-frame — PASS",
+    "mobile_backdrop_perf": "stars=25, tris=0, spotlight div absent — PASS",
+    "mobile_about_main_logo": "clientWidth=144 (>=140), naturalWidth=500, complete=true, .logo-frame wrapper present — PASS",
+    "mobile_about_developer_photo": "clientWidth=216 (>=200), naturalWidth=1260, complete=true (Adesh Yash) — PASS",
+    "mobile_footer_dev_photo": "clientWidth=124 (>=100), naturalWidth=1260, complete=true — PASS",
+    "mobile_footer_brand_logo": "clientWidth=64, naturalWidth=500, complete=true, .logo-frame wrapper present — PASS",
+    "mobile_pdf_viewer_gview": "iframe src = https://docs.google.com/gview?url=<encoded api/files/{id}/view>&embedded=true — PASS (PDF content actually rendered in gview iframe)",
+    "desktop_navbar_logo": "clientWidth=44, naturalWidth=500, hasFrame=true — PASS",
+    "desktop_backdrop_full": "stars=90, tris=14 — PASS",
+    "desktop_pdf_viewer_raw": "iframe src = https://first-year-vault.preview.emergentagent.com/api/files/{id}/view (no gview) — PASS",
+    "regression_all_pages": "/ /notes /pyqs /syllabus /resources /admin /about all load, zero broken images (natural=0 while complete=true) — PASS",
+    "developer_links": "LinkedIn (https://www.linkedin.com/in/adesh-yash-624a87383/), Instagram (https://www.instagram.com/_adesh__.y/?hl=en), Email (mailto:yashadesh.13@gmail.com) — all correct"
+  }
+}
