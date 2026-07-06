@@ -1,0 +1,528 @@
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { api, API } from "@/lib/api";
+import PageHeader from "@/components/PageHeader";
+import {
+  Upload, Plus, Trash2, FileText, FolderPlus, LinkIcon, BookOpen, FileArchive,
+} from "lucide-react";
+
+const TABS = [
+  { key: "notes", label: "Notes", Icon: BookOpen },
+  { key: "pyq", label: "PYQs", Icon: FileText },
+  { key: "syllabus", label: "Syllabus", Icon: FileArchive },
+  { key: "resource", label: "Resources", Icon: LinkIcon },
+  { key: "manage", label: "Manage", Icon: FolderPlus },
+];
+
+export default function Admin() {
+  const [tab, setTab] = useState("notes");
+  const [subjects, setSubjects] = useState([]);
+  const [modules, setModules] = useState([]);
+  const [files, setFiles] = useState([]);
+  const [resources, setResources] = useState([]);
+
+  const loadAll = async () => {
+    const [s1, s2] = await Promise.all([
+      api.get("/subjects?semester=1"), api.get("/subjects?semester=2"),
+    ]);
+    setSubjects([...s1.data, ...s2.data]);
+    const f = await api.get("/files");
+    setFiles(f.data);
+    const r = await api.get("/resources");
+    setResources(r.data);
+  };
+  useEffect(() => { loadAll(); }, []);
+
+  const loadModules = async (subjectId) => {
+    if (!subjectId) return setModules([]);
+    const { data } = await api.get(`/subjects/${subjectId}/modules`);
+    setModules(data);
+  };
+
+  return (
+    <div className="page-enter mx-auto max-w-6xl px-6 pt-28 md:pt-32">
+      <PageHeader
+        chip="Admin Dashboard"
+        title={<>Manage the <span className="text-[#00E5D4]">library</span></>}
+        subtitle="Upload files, add subjects & modules, and curate resources. Open access — no login."
+        testid="admin-header"
+      />
+
+      <div className="mt-8 flex flex-wrap gap-2">
+        {TABS.map(({ key, label, Icon }) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            data-testid={`admin-tab-${key}`}
+            className={`px-4 py-2 rounded-full text-sm font-medium tracking-wide transition border inline-flex items-center gap-2 ${
+              tab === key
+                ? "bg-[#00E5D4]/15 text-[#00E5D4] border-[#00E5D4]/60 shadow-[0_0_20px_rgba(0,229,212,0.25)]"
+                : "border-white/10 text-white/60 hover:text-white hover:border-white/25"
+            }`}
+          >
+            <Icon className="w-4 h-4" /> {label}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-8 grid gap-8 lg:grid-cols-2">
+        {tab === "notes" && (
+          <UploadNotes subjects={subjects} modules={modules} onSubject={loadModules} refresh={loadAll} />
+        )}
+        {tab === "pyq" && (
+          <UploadPYQ subjects={subjects} refresh={loadAll} />
+        )}
+        {tab === "syllabus" && (
+          <UploadSyllabus refresh={loadAll} />
+        )}
+        {tab === "resource" && (
+          <>
+            <UploadResourceFile refresh={loadAll} />
+            <AddResourceLink refresh={loadAll} />
+          </>
+        )}
+        {tab === "manage" && (
+          <>
+            <AddSubject refresh={loadAll} />
+            <AddModule subjects={subjects} modules={modules} onSubject={loadModules} refresh={loadAll} />
+          </>
+        )}
+
+        <ListFiles files={files} tab={tab} refresh={loadAll} />
+        {tab === "resource" && <ListResources resources={resources} refresh={loadAll} />}
+      </div>
+    </div>
+  );
+}
+
+/* ----- Sub-forms ----- */
+function GlassBox({ title, children, testid }) {
+  return (
+    <div className="card-glass p-6 md:p-8" data-testid={testid}>
+      <h3 className="font-display text-lg font-semibold mb-5">{title}</h3>
+      {children}
+    </div>
+  );
+}
+function Field({ label, children }) {
+  return (
+    <label className="block mb-4">
+      <div className="text-xs font-mono uppercase tracking-widest text-white/60 mb-1.5">{label}</div>
+      {children}
+    </label>
+  );
+}
+const inp = "w-full px-4 py-2.5 rounded-xl bg-[#0D1117]/70 border border-white/10 text-white text-sm focus:outline-none focus:border-[#00E5D4]/60 focus:ring-2 focus:ring-[#00E5D4]/20";
+
+function UploadNotes({ subjects, modules, onSubject, refresh }) {
+  const [subjectId, setSubjectId] = useState("");
+  const [moduleId, setModuleId] = useState("");
+  const [file, setFile] = useState(null);
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!subjectId || !moduleId || !file) return toast.error("Select subject, module and file");
+    setBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("category", "notes");
+      fd.append("subject_id", subjectId);
+      fd.append("module_id", moduleId);
+      if (name) fd.append("display_name", name);
+      await api.post("/upload", fd);
+      toast.success("Notes uploaded");
+      setFile(null); setName("");
+      refresh();
+    } catch (e) { toast.error("Upload failed"); }
+    setBusy(false);
+  };
+
+  return (
+    <GlassBox title="Upload Notes" testid="admin-upload-notes">
+      <form onSubmit={submit}>
+        <Field label="Subject">
+          <select className={inp} value={subjectId} onChange={(e)=>{setSubjectId(e.target.value); onSubject(e.target.value);}} data-testid="admin-notes-subject">
+            <option value="">Select subject…</option>
+            {subjects.map((s) => (
+              <option key={s.id} value={s.id}>Sem {s.semester} · {s.name}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Module">
+          <select className={inp} value={moduleId} onChange={(e)=>setModuleId(e.target.value)} data-testid="admin-notes-module">
+            <option value="">Select module…</option>
+            {modules.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+          </select>
+        </Field>
+        <Field label="Display Name (optional)">
+          <input className={inp} value={name} onChange={(e)=>setName(e.target.value)} placeholder="e.g., Module 1 Notes" data-testid="admin-notes-name" />
+        </Field>
+        <Field label="File">
+          <input type="file" onChange={(e)=>setFile(e.target.files?.[0] || null)} className={inp} data-testid="admin-notes-file" accept=".pdf,.ppt,.pptx,.doc,.docx,.png,.jpg,.jpeg" />
+        </Field>
+        <button type="submit" className="btn-neon primary w-full" disabled={busy} data-testid="admin-notes-submit">
+          <Upload className="w-4 h-4" /> {busy ? "Uploading…" : "Upload Notes"}
+        </button>
+      </form>
+    </GlassBox>
+  );
+}
+
+function UploadPYQ({ subjects, refresh }) {
+  const [subjectId, setSubjectId] = useState("");
+  const [pyqType, setPyqType] = useState("mid");
+  const [file, setFile] = useState(null);
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!subjectId || !file) return toast.error("Select subject and file");
+    setBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("category", "pyq");
+      fd.append("subject_id", subjectId);
+      fd.append("pyq_type", pyqType);
+      if (name) fd.append("display_name", name);
+      await api.post("/upload", fd);
+      toast.success("PYQ uploaded");
+      setFile(null); setName("");
+      refresh();
+    } catch { toast.error("Upload failed"); }
+    setBusy(false);
+  };
+
+  return (
+    <GlassBox title="Upload PYQ" testid="admin-upload-pyq">
+      <form onSubmit={submit}>
+        <Field label="Subject">
+          <select className={inp} value={subjectId} onChange={(e)=>setSubjectId(e.target.value)} data-testid="admin-pyq-subject">
+            <option value="">Select subject…</option>
+            {subjects.map((s) => (<option key={s.id} value={s.id}>Sem {s.semester} · {s.name}</option>))}
+          </select>
+        </Field>
+        <Field label="Paper Type">
+          <select className={inp} value={pyqType} onChange={(e)=>setPyqType(e.target.value)} data-testid="admin-pyq-type">
+            <option value="mid">Mid Semester</option>
+            <option value="end">End Semester</option>
+            <option value="solution">Solution</option>
+          </select>
+        </Field>
+        <Field label="Display Name (optional)">
+          <input className={inp} value={name} onChange={(e)=>setName(e.target.value)} placeholder="e.g., End Sem 2023" data-testid="admin-pyq-name" />
+        </Field>
+        <Field label="File">
+          <input type="file" onChange={(e)=>setFile(e.target.files?.[0] || null)} className={inp} data-testid="admin-pyq-file" />
+        </Field>
+        <button type="submit" className="btn-neon primary w-full" disabled={busy} data-testid="admin-pyq-submit">
+          <Upload className="w-4 h-4" /> {busy ? "Uploading…" : "Upload PYQ"}
+        </button>
+      </form>
+    </GlassBox>
+  );
+}
+
+function UploadSyllabus({ refresh }) {
+  const [semester, setSemester] = useState(1);
+  const [file, setFile] = useState(null);
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!file) return toast.error("Select file");
+    setBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("category", "syllabus");
+      fd.append("semester", semester);
+      if (name) fd.append("display_name", name);
+      await api.post("/upload", fd);
+      toast.success("Syllabus uploaded");
+      setFile(null); setName("");
+      refresh();
+    } catch { toast.error("Upload failed"); }
+    setBusy(false);
+  };
+
+  return (
+    <GlassBox title="Upload Syllabus" testid="admin-upload-syllabus">
+      <form onSubmit={submit}>
+        <Field label="Semester">
+          <select className={inp} value={semester} onChange={(e)=>setSemester(+e.target.value)} data-testid="admin-syl-sem">
+            <option value={1}>Semester 1</option>
+            <option value={2}>Semester 2</option>
+          </select>
+        </Field>
+        <Field label="Display Name (optional)">
+          <input className={inp} value={name} onChange={(e)=>setName(e.target.value)} data-testid="admin-syl-name" />
+        </Field>
+        <Field label="File">
+          <input type="file" onChange={(e)=>setFile(e.target.files?.[0] || null)} className={inp} data-testid="admin-syl-file" />
+        </Field>
+        <button type="submit" className="btn-neon primary w-full" disabled={busy} data-testid="admin-syl-submit">
+          <Upload className="w-4 h-4" /> {busy ? "Uploading…" : "Upload Syllabus"}
+        </button>
+      </form>
+    </GlassBox>
+  );
+}
+
+function UploadResourceFile({ refresh }) {
+  const [rtype, setRtype] = useState("book");
+  const [file, setFile] = useState(null);
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!file) return toast.error("Select file");
+    setBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("category", "resource");
+      fd.append("resource_type", rtype);
+      if (name) fd.append("display_name", name);
+      await api.post("/upload", fd);
+      toast.success("Resource uploaded");
+      setFile(null); setName("");
+      refresh();
+    } catch { toast.error("Upload failed"); }
+    setBusy(false);
+  };
+
+  return (
+    <GlassBox title="Upload Resource File" testid="admin-upload-resource">
+      <form onSubmit={submit}>
+        <Field label="Category">
+          <select className={inp} value={rtype} onChange={(e)=>setRtype(e.target.value)} data-testid="admin-res-cat">
+            <option value="book">Books</option>
+            <option value="coding">Coding</option>
+            <option value="semester">Semester Resources</option>
+          </select>
+        </Field>
+        <Field label="Display Name">
+          <input className={inp} value={name} onChange={(e)=>setName(e.target.value)} data-testid="admin-res-file-name" />
+        </Field>
+        <Field label="File">
+          <input type="file" onChange={(e)=>setFile(e.target.files?.[0] || null)} className={inp} data-testid="admin-res-file" />
+        </Field>
+        <button type="submit" className="btn-neon primary w-full" disabled={busy} data-testid="admin-res-submit">
+          <Upload className="w-4 h-4" /> {busy ? "Uploading…" : "Upload"}
+        </button>
+      </form>
+    </GlassBox>
+  );
+}
+
+function AddResourceLink({ refresh }) {
+  const [title, setTitle] = useState("");
+  const [url, setUrl] = useState("");
+  const [rtype, setRtype] = useState("youtube");
+  const [desc, setDesc] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!title || !url) return toast.error("Title and URL required");
+    setBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append("title", title);
+      fd.append("url", url);
+      fd.append("resource_type", rtype);
+      fd.append("description", desc);
+      await api.post("/resources", fd);
+      toast.success("Link added");
+      setTitle(""); setUrl(""); setDesc("");
+      refresh();
+    } catch { toast.error("Failed"); }
+    setBusy(false);
+  };
+
+  return (
+    <GlassBox title="Add Resource Link" testid="admin-add-link">
+      <form onSubmit={submit}>
+        <Field label="Type">
+          <select className={inp} value={rtype} onChange={(e)=>setRtype(e.target.value)} data-testid="admin-link-type">
+            <option value="book">Books</option>
+            <option value="youtube">YouTube Playlist</option>
+            <option value="coding">Coding Resource</option>
+            <option value="semester">Semester Resource</option>
+            <option value="link">Important Link</option>
+          </select>
+        </Field>
+        <Field label="Title">
+          <input className={inp} value={title} onChange={(e)=>setTitle(e.target.value)} data-testid="admin-link-title" />
+        </Field>
+        <Field label="URL">
+          <input className={inp} value={url} onChange={(e)=>setUrl(e.target.value)} placeholder="https://…" data-testid="admin-link-url" />
+        </Field>
+        <Field label="Description">
+          <textarea className={inp} value={desc} onChange={(e)=>setDesc(e.target.value)} rows={2} data-testid="admin-link-desc" />
+        </Field>
+        <button type="submit" className="btn-neon primary w-full" disabled={busy} data-testid="admin-link-submit">
+          <Plus className="w-4 h-4" /> {busy ? "Adding…" : "Add Link"}
+        </button>
+      </form>
+    </GlassBox>
+  );
+}
+
+function AddSubject({ refresh }) {
+  const [name, setName] = useState("");
+  const [semester, setSemester] = useState(1);
+  const [credits, setCredits] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!name) return;
+    setBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append("name", name);
+      fd.append("semester", semester);
+      if (credits) fd.append("credits", credits);
+      await api.post("/subjects", fd);
+      toast.success("Subject added");
+      setName(""); setCredits("");
+      refresh();
+    } catch { toast.error("Failed"); }
+    setBusy(false);
+  };
+
+  return (
+    <GlassBox title="Add Subject" testid="admin-add-subject">
+      <form onSubmit={submit}>
+        <Field label="Name"><input className={inp} value={name} onChange={(e)=>setName(e.target.value)} data-testid="admin-subject-name" /></Field>
+        <Field label="Semester">
+          <select className={inp} value={semester} onChange={(e)=>setSemester(+e.target.value)} data-testid="admin-subject-sem">
+            <option value={1}>Semester 1</option>
+            <option value={2}>Semester 2</option>
+          </select>
+        </Field>
+        <Field label="Credits">
+          <input className={inp} type="number" step="0.5" value={credits} onChange={(e)=>setCredits(e.target.value)} data-testid="admin-subject-credits" />
+        </Field>
+        <button type="submit" className="btn-neon primary w-full" disabled={busy} data-testid="admin-subject-submit">
+          <Plus className="w-4 h-4" /> Add Subject
+        </button>
+      </form>
+    </GlassBox>
+  );
+}
+
+function AddModule({ subjects, modules, onSubject, refresh }) {
+  const [subjectId, setSubjectId] = useState("");
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!subjectId || !name) return;
+    setBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append("subject_id", subjectId);
+      fd.append("name", name);
+      await api.post("/modules", fd);
+      toast.success("Module added");
+      setName("");
+      onSubject(subjectId);
+      refresh();
+    } catch { toast.error("Failed"); }
+    setBusy(false);
+  };
+
+  return (
+    <GlassBox title="Add Module" testid="admin-add-module">
+      <form onSubmit={submit}>
+        <Field label="Subject">
+          <select className={inp} value={subjectId} onChange={(e)=>{setSubjectId(e.target.value); onSubject(e.target.value);}} data-testid="admin-module-subject">
+            <option value="">Select subject…</option>
+            {subjects.map((s) => (<option key={s.id} value={s.id}>Sem {s.semester} · {s.name}</option>))}
+          </select>
+        </Field>
+        <Field label="Name"><input className={inp} value={name} onChange={(e)=>setName(e.target.value)} placeholder="e.g., Module 6" data-testid="admin-module-name" /></Field>
+        <button type="submit" className="btn-neon primary w-full" disabled={busy} data-testid="admin-module-submit">
+          <Plus className="w-4 h-4" /> Add Module
+        </button>
+        {modules.length > 0 && (
+          <div className="mt-4 text-xs font-mono text-white/50">Existing: {modules.map(m=>m.name).join(", ")}</div>
+        )}
+      </form>
+    </GlassBox>
+  );
+}
+
+function ListFiles({ files, tab, refresh }) {
+  const filtered = tab === "manage" ? files : files.filter((f) => f.category === tab);
+  const remove = async (id) => {
+    await api.delete(`/files/${id}`);
+    toast.success("File removed");
+    refresh();
+  };
+  return (
+    <GlassBox title={`Uploaded (${filtered.length})`} testid="admin-file-list">
+      <div className="space-y-2 max-h-[560px] overflow-y-auto pr-1">
+        {filtered.map((f) => (
+          <div key={f.id} className="file-row" data-testid={`admin-file-${f.id}`}>
+            <div className="w-9 h-9 rounded-lg bg-[#00E5D4]/10 border border-[#00E5D4]/30 flex items-center justify-center shrink-0">
+              <FileText className="w-4 h-4 text-[#00E5D4]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-white truncate">{f.display_name}</div>
+              <div className="text-[10px] font-mono text-white/50 uppercase tracking-widest">{f.category} · {f.original_filename}</div>
+            </div>
+            <a href={`${API}/files/${f.id}/download`} className="text-white/60 hover:text-[#00E5D4] p-2" title="Download" data-testid={`admin-file-download-${f.id}`}>
+              <FileText className="w-4 h-4" />
+            </a>
+            <button onClick={()=>remove(f.id)} className="text-white/60 hover:text-red-400 p-2" title="Delete" data-testid={`admin-file-delete-${f.id}`}>
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        ))}
+        {filtered.length === 0 && (
+          <div className="text-white/50 text-sm text-center py-8">No files yet.</div>
+        )}
+      </div>
+    </GlassBox>
+  );
+}
+
+function ListResources({ resources, refresh }) {
+  const remove = async (id) => {
+    await api.delete(`/resources/${id}`);
+    toast.success("Removed");
+    refresh();
+  };
+  return (
+    <GlassBox title={`Resource Links (${resources.length})`} testid="admin-resource-list">
+      <div className="space-y-2 max-h-[560px] overflow-y-auto pr-1">
+        {resources.map((r) => (
+          <div key={r.id} className="file-row" data-testid={`admin-resource-${r.id}`}>
+            <div className="w-9 h-9 rounded-lg bg-[#00E5D4]/10 border border-[#00E5D4]/30 flex items-center justify-center shrink-0">
+              <LinkIcon className="w-4 h-4 text-[#00E5D4]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-white truncate">{r.title}</div>
+              <div className="text-[10px] font-mono text-white/50 uppercase tracking-widest">{r.resource_type}</div>
+            </div>
+            <button onClick={()=>remove(r.id)} className="text-white/60 hover:text-red-400 p-2" data-testid={`admin-resource-delete-${r.id}`}>
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        ))}
+        {resources.length === 0 && (<div className="text-white/50 text-sm text-center py-8">No resource links yet.</div>)}
+      </div>
+    </GlassBox>
+  );
+}
