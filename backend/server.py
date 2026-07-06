@@ -398,10 +398,11 @@ async def analytics_trending(limit: int = 8):
             "score": score,
         })
 
-    # If everything is 0, seed deterministic-but-varied demo numbers so the chart looks alive
-    if all(r["score"] == 0 for r in rows):
-        import hashlib
-        for r in rows:
+    # Per-row fallback: fill zero-activity rows with deterministic demo values so
+    # the chart always looks populated, while preserving real activity where present.
+    import hashlib
+    for r in rows:
+        if r["score"] == 0:
             h = int(hashlib.md5(r["name"].encode()).hexdigest(), 16)
             r["views"] = (h % 240) + 60          # 60–300
             r["downloads"] = (h % 90) + 20        # 20–110

@@ -135,3 +135,63 @@ class TestViewDownloadTracking:
         assert rd.status_code == 200
         assert len(rd.content) > 0
         assert "attachment" in rd.headers.get("content-disposition", "").lower()
+
+
+# ── PER-ROW FALLBACK REGRESSION (iteration_5 HIGH bug fix verification) ──────
+class TestPerRowFallbackRegression:
+    """Confirms the fix for iteration_5 HIGH bug: fallback must apply PER-ROW,
+    not globally. After real /view activity on one subject, every OTHER row in
+    the trending response must still have score > 0 (demo-filled), while the
+    row with real activity preserves its real values."""
+
+    def _find_file_with_subject(self, s):
+        r = s.get(f"{BASE_URL}/api/files", timeout=30)
+        if r.status_code != 200:
+            return None
+        for f in r.json():
+            if f.get("subject_id"):
+                return f
+        return None
+
+    def test_per_row_fallback_after_real_activity(self, s):
+        f = self._find_file_with_subject(s)
+        if not f:
+            pytest.skip("No file with subject_id available")
+
+        # Trigger real activity: call /view twice
+        for _ in range(2):
+            rv = s.get(f"{BASE_URL}/api/files/{f['id']}/view", timeout=60)
+            assert rv.status_code == 200
+            assert len(rv.content) > 0
+        time.sleep(0.5)
+
+        # Trending with limit=8 — every row must have score > 0
+        r = s.get(f"{BASE_URL}/api/analytics/trending?limit=8", timeout=30)
+        assert r.status_code == 200
+        data = r.json()
+        assert len(data["trending"]) == 8, "expected exactly 8 rows"
+        for row in data["trending"]:
+            assert row["score"] > 0, (
+                f"PER-ROW FALLBACK BROKEN — row {row['name']!r} has score=0 after real activity: {row}"
+            )
+            assert row["views"] > 0, f"row {row['name']!r} has views=0: {row}"
+
+        # And the target subject must reflect REAL activity (views >= 2) if in full list
+        full = s.get(f"{BASE_URL}/api/analytics/trending?limit=20", timeout=30).json()
+        target_row = next((x for x in full["trending"] if x["subject_id"] == f["subject_id"]), None)
+        assert target_row is not None, "target subject missing from full trending"
+        assert target_row["views"] >= 2, (
+            f"target subject should reflect real activity (>=2 views), got {target_row}"
+        )
+
+    def test_limit_variations_never_return_zero_score(self, s):
+        for lim in (4, 8, 20):
+            r = s.get(f"{BASE_URL}/api/analytics/trending?limit={lim}", timeout=30)
+            assert r.status_code == 200
+            data = r.json()
+            expected_len = min(lim, data["total_subjects"])
+            assert len(data["trending"]) == expected_len, (
+                f"limit={lim}: expected {expected_len} rows, got {len(data['trending'])}"
+            )
+            for row in data["trending"]:
+                assert row["score"] > 0, f"limit={lim}: row has score=0 → {row}"

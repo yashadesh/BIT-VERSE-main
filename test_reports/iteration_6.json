@@ -1,0 +1,41 @@
+{
+  "summary": "RETEST of iteration_5 HIGH-priority bug fix — per-row fallback in /api/analytics/trending. PASS on all four requested scenarios. (a) Called /api/files/{physics_file_id}/view twice on a real Physics PDF; (b) called /api/analytics/trending?limit=8; (c) all 8 returned rows have score>0 (values 331–454), zero empty bars; (d) target Physics subject reflects real activity (views=4 accumulated across iterations, downloads=1) confirming real data is preserved and not overwritten by demo. Real activity (score=6) is naturally smaller than demo values (300-450), so Physics moves below top-8 — this is expected/intended behavior per problem statement. Limit variations (4/8/20/50) all return correctly with zero score=0 rows. Frontend TrendingChart on Home renders exactly 8 recharts bar rectangles with heights 124-170px, live-refresh via setInterval(8s) confirmed by triggering another /view and observing chart still populated after 10s. All 12 pytest tests pass (10 pre-existing + 2 new per-row regression tests).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "TrendingChart (Home)",
+        "issues": [
+          "Non-blocking recharts warning still present in DevTools: 'The width(-1) and height(-1) of chart should be greater than 0' — appears ~4 times during ResponsiveContainer mount before size is measured; does not affect rendering. Same finding as iteration_5 (optional cleanup). Suggested fix: add min-height/min-width on the ResponsiveContainer wrapper."
+        ]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_trending_and_assets.py",
+    "/app/test_reports/pytest/trending_results.xml"
+  ],
+  "action_items": [
+    "HIGH bug from iteration_5 is FIXED. No blocking action items.",
+    "OPTIONAL: silence recharts width/height=-1 warnings by adding min-height:360px on ResponsiveContainer wrapper (unchanged since iteration_5)."
+  ],
+  "critical_code_review_comments": [
+    "server.py L403-409: per-row fallback is now correct — real activity preserved, empty rows demo-filled. Hash-based deterministic values (60-300 views, 20-110 downloads) produce scores 100-520 which naturally out-rank early real activity. This is the documented intended behavior.",
+    "server.py L338-347 & L360-368 (unchanged from iteration_5): try/except silently swallows view_count/subject_stats $inc errors — still recommend logger.exception() to avoid masking Mongo failures.",
+    "TrendingChart.jsx (unchanged): setInterval remount via key={tick} re-runs 900ms animation every 8s — intentional, acceptable."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_trending_and_assets.py (added TestPerRowFallbackRegression class with 2 tests)"
+  ],
+  "success_rate": {"backend": "100% (12/12 pytest tests)", "frontend": "100% (all 8 bars rendered, live-refresh confirmed)"},
+  "seed_data_creation": "None new. Physics file (id=9c1c523f-9181-4724-ac97-7fe548e637b6) received 2 real /view calls during test; subject_stats now has views=4 downloads=1 for Physics subject.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration_5 HIGH bug fully resolved. Per-row fallback in /api/analytics/trending correctly fills zero-activity rows with hash-based demo values while preserving real /view and /download activity. Verified reproduction scenario: 2×/view on Physics → all 8 trending rows still have score>0, Physics subject persists views>=2 in full list. Frontend chart shows 8 healthy bars (124-170px). No further action needed on this feature.",
+  "rca_of_the_issue": "PREVIOUS BUG (iteration_5, now FIXED): global `if all(r['score']==0 ...)` gate in analytics_trending() disabled the fallback for every subject the moment any single row had real activity. FIX APPLIED (server.py L403-409): replaced with per-row loop — `for r in rows: if r['score'] == 0: <hash-based demo values>`. VERIFICATION: hit /view twice on Physics file → GET /api/analytics/trending?limit=8 returns 8 rows all score>0 (verified programmatically and visually via Playwright screenshot showing 8 bars with heights 300-450). Fix is correct and complete."
+}
