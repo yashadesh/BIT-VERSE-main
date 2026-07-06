@@ -37,7 +37,7 @@ export default function Viewer() {
           <button onClick={() => window.close()} className="text-white/60 hover:text-white shrink-0" data-testid="viewer-close">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <img src={LOGO_URL} alt="BITVERSE" className="w-8 h-8 logo-glow rounded-md shrink-0" />
+          <img src={LOGO_URL} alt="BITVERSE" className="w-10 h-10 logo-glow object-contain shrink-0" />
           <div className="min-w-0">
             <div className="text-white text-sm font-medium truncate">{f.display_name}</div>
             <div className="text-[10px] font-mono text-white/50 uppercase tracking-widest">{ext} · BITVERSE Viewer</div>

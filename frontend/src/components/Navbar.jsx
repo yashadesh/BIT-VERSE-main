@@ -25,7 +25,7 @@ export default function Navbar() {
             <img
               src={LOGO_URL}
               alt="BITVERSE"
-              className="w-9 h-9 logo-glow rounded-lg"
+              className="w-14 h-14 logo-glow object-contain shrink-0"
             />
             <span className="font-display text-lg font-bold tracking-wider">
               BIT<span className="text-[#00E5D4]">VERSE</span>

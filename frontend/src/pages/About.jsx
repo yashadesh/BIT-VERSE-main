@@ -20,7 +20,7 @@ export default function About() {
 
       <div className="mt-12 grid gap-8 md:grid-cols-2">
         <div className="card-glass p-8 md:p-10 flex flex-col items-start gap-6">
-          <img src={LOGO_URL} alt="BITVERSE" className="w-24 h-24 logo-glow rounded-2xl" />
+          <img src={LOGO_URL} alt="BITVERSE" className="w-32 h-32 logo-glow object-contain" />
           <p className="text-[#B0B8C5] leading-relaxed">
             BITVERSE provides organized notes, previous year papers, syllabi, and academic
             resources — all in one beautiful and easy-to-use platform. Semester-wise

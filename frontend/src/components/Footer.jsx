@@ -55,7 +55,7 @@ export default function Footer() {
       <div className="mx-auto max-w-6xl px-6 py-12 grid gap-10 md:grid-cols-4">
         <div className="md:col-span-2">
           <div className="flex items-center gap-3">
-            <img src={LOGO_URL} alt="BITVERSE" className="w-12 h-12 logo-glow object-contain" />
+            <img src={LOGO_URL} alt="BITVERSE" className="w-16 h-16 logo-glow object-contain" />
             <span className="font-display text-xl font-bold tracking-wider">
               BIT<span className="text-[#00E5D4]">VERSE</span>
             </span>
