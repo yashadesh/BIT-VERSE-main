@@ -556,6 +556,26 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# backend/server.py
+
+# ... find your existing FastAPI initialization scripts ...
+
+origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://frontend-atjz.onrender.com",
+    "https://bitverse.co.in",
+    "http://bitverse.co.in",
+    "https://www.bitverse.co.in",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
