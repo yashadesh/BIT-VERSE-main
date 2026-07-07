@@ -2,6 +2,7 @@
 FastAPI + MongoDB + Emergent Object Storage
 """
 from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Form, Response, Query, Depends, Request
+from fastapi.middleware.gzip import GZipMiddleware
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -216,30 +217,42 @@ class ResourceLink(BaseModel):
 # ── Seed ─────────────────────────────────────────────────────────────────────
 SEM1_SUBJECTS = [
     ("Environmental Science", 2),
-    ("Chemistry", 3.5),
+    ("Chemistry", 4),
     ("Chemistry Lab", 1),
     ("Basic Electronics", 3),
     ("Basic Electronics Lab", 1),
     ("Mathematics-I", 4),
     ("Basics of Mechanical Engineering", 3),
     ("Engineering Graphics", 2),
-    ("Workshop Practice", 1.5),
+    ("Workshop Practice", 1),
     ("NSS", 1),
 ]
 SEM2_SUBJECTS = [
     ("Biological Science for Engineers", 2),
-    ("Programming for Problem Solving", 3),
+    ("Programming for Problem Solving", 4),
     ("Programming for Problem Solving Laboratory", 1),
     ("Basics of Electrical Engineering", 3),
     ("Electrical Engineering Lab", 1),
-    ("Communication Skill-I", 2),
+    ("Communication Skill-I", 1.5),
     ("Mathematics-II", 4),
     ("Physics", 4),
     ("Physics Lab", 1),
-    ("PT and Games", 1.5),
 ]
 
+# Subjects that no longer exist and should be purged on every startup
+DEPRECATED_SUBJECTS = ["PT and Games"]
+
 async def seed_if_empty():
+    # Purge deprecated subjects on every startup (removes PT and Games + its modules/files)
+    for dep_name in DEPRECATED_SUBJECTS:
+        depr = await db.subjects.find_one({"name": dep_name})
+        if depr:
+            await db.modules.delete_many({"subject_id": depr["id"]})
+            await db.files.update_many({"subject_id": depr["id"]}, {"$set": {"is_deleted": True}})
+            await db.subject_stats.delete_many({"subject_id": depr["id"]})
+            await db.subjects.delete_one({"_id": depr["_id"]})
+            logging.info("Purged deprecated subject: %s", dep_name)
+
     count = await db.subjects.count_documents({})
     if count > 0:
         # Always sync credits to canonical values (idempotent)
@@ -260,6 +273,23 @@ async def seed_if_empty():
                 mod = Module(subject_id=subj.id, name=f"Module {m}", order=m)
                 await db.modules.insert_one(mod.model_dump())
     logging.info("Seed complete.")
+
+async def create_indexes():
+    """Create MongoDB indexes for hot query paths."""
+    try:
+        await db.subjects.create_index([("semester", 1), ("order", 1)])
+        await db.subjects.create_index("name")
+        await db.modules.create_index([("subject_id", 1), ("order", 1)])
+        await db.files.create_index([("subject_id", 1), ("category", 1), ("is_deleted", 1)])
+        await db.files.create_index([("module_id", 1), ("is_deleted", 1)])
+        await db.files.create_index([("category", 1), ("is_deleted", 1)])
+        await db.files.create_index([("pyq_type", 1)])
+        await db.subject_stats.create_index("subject_id", unique=True)
+        await db.resources.create_index("resource_type")
+        await db.admin_user.create_index("email", unique=True)
+        logging.info("MongoDB indexes ready")
+    except Exception as e:
+        logging.warning("Index creation warning: %s", e)
 
 # ── Routes: Meta ─────────────────────────────────────────────────────────────
 @api_router.get("/")
@@ -539,6 +569,7 @@ async def startup():
         logger.warning(f"Storage init deferred: {e}")
     await seed_admin()
     await seed_if_empty()
+    await create_indexes()
 
 @app.on_event("shutdown")
 async def shutdown():

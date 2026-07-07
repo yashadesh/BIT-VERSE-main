@@ -13,7 +13,7 @@ const semesters = [
     n: 2,
     title: "Semester 2 (P)",
     subtitle: "Programming, Physics, Electrical, Maths-II and Communication skills.",
-    count: 10,
+    count: 9,
   },
 ];
 

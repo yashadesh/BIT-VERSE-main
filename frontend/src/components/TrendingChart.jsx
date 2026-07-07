@@ -140,22 +140,28 @@ export default function TrendingChart() {
             </ResponsiveContainer>
           </div>
 
-          <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3">
-            {data.slice(0, 4).map((d, i) => (
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-3">
+            {data.slice(0, 6).map((d, i) => (
               <Link
                 key={d.subject_id}
                 to={`/notes/subject/${d.subject_id}`}
                 className="file-row"
                 data-testid={`trending-item-${i}`}
               >
-                <div className="w-9 h-9 rounded-lg bg-[#00E5D4]/10 border border-[#00E5D4]/30 flex items-center justify-center shrink-0 font-mono text-[#00E5D4] text-sm">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 font-mono text-sm font-bold ${
+                  i === 0 ? "bg-[#00E5D4]/20 border border-[#00E5D4]/60 text-[#00E5D4]" :
+                  i === 1 ? "bg-[#00B8FF]/15 border border-[#00B8FF]/50 text-[#00B8FF]" :
+                  i === 2 ? "bg-white/10 border border-white/25 text-white" :
+                  "bg-[#00E5D4]/5 border border-[#00E5D4]/20 text-[#00E5D4]/70"
+                }`}>
                   #{i + 1}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs md:text-sm text-white font-medium truncate">{d.name}</div>
-                  <div className="text-[10px] font-mono text-white/50 mt-0.5 flex items-center gap-2">
-                    <span className="flex items-center gap-1"><Eye className="w-2.5 h-2.5" />{d.views}</span>
-                    <span className="flex items-center gap-1"><Download className="w-2.5 h-2.5" />{d.downloads}</span>
+                  <div className="text-sm text-white font-medium truncate">{d.name}</div>
+                  <div className="text-[10px] font-mono text-white/60 mt-1 flex items-center gap-3">
+                    <span className="flex items-center gap-1 text-[#00E5D4]"><Eye className="w-3 h-3" />{d.views}</span>
+                    <span className="flex items-center gap-1 text-[#00B8FF]"><Download className="w-3 h-3" />{d.downloads}</span>
+                    <span className="text-white/40">Sem {d.semester}{d.semester === 1 ? " (C)" : " (P)"}</span>
                   </div>
                 </div>
                 <ArrowRight className="w-4 h-4 text-white/40" />

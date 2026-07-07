@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom";
 import { Download, Eye, FileText, FileImage, Presentation, FileType2 } from "lucide-react";
 
 function iconFor(name) {
@@ -28,7 +27,9 @@ function fmtDate(iso) {
 export default function FileCard({ file, apiBase }) {
   const { Icon, color } = iconFor(file.original_filename);
   const downloadHref = `${apiBase}/files/${file.id}/download`;
-  const viewHref = `/viewer/${file.id}`;
+  const rawUrl = `${apiBase}/files/${file.id}/view`;
+  // Open the actual Google Drive Viewer page in a new tab (works on Android + iOS + laptops)
+  const driveViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(rawUrl)}`;
 
   return (
     <div className="file-row" data-testid={`file-card-${file.id}`}>
@@ -47,23 +48,25 @@ export default function FileCard({ file, apiBase }) {
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <Link
-          to={viewHref}
+        <a
+          href={driveViewerUrl}
           target="_blank"
           rel="noreferrer"
           className="btn-neon"
-          style={{ padding: "0.5rem 0.9rem", fontSize: "0.7rem" }}
+          style={{ padding: "0.5rem 0.9rem", fontSize: "0.7rem", minHeight: 40 }}
           data-testid={`file-view-${file.id}`}
+          aria-label="View in Google Drive Viewer"
         >
-          <Eye className="w-3.5 h-3.5" /> View
-        </Link>
+          <Eye className="w-3.5 h-3.5" /> <span className="hidden sm:inline">View</span>
+        </a>
         <a
           href={downloadHref}
           className="btn-neon primary"
-          style={{ padding: "0.5rem 0.9rem", fontSize: "0.7rem" }}
+          style={{ padding: "0.5rem 0.9rem", fontSize: "0.7rem", minHeight: 40 }}
           data-testid={`file-download-${file.id}`}
+          aria-label="Download file"
         >
-          <Download className="w-3.5 h-3.5" /> Download
+          <Download className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Download</span>
         </a>
       </div>
     </div>

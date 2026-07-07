@@ -20,7 +20,6 @@ const DIRECT_FILE_SUBJECTS = new Set([
   "Programming for Problem Solving",
   "Workshop Practice",
   "NSS",
-  "PT and Games",
   "Engineering Graphics",
 ]);
 const isDirectFilesSubject = (name) =>

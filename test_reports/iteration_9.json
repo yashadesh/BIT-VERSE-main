@@ -1,0 +1,41 @@
+{
+  "summary": "Iteration 9 — Verified PT/Games removal, new credit spec (Sem1=22cr, Sem2=21.5cr), live server-load trending tracker, Google Drive Viewer link in FileCard, mobile PWA meta tags, GZip middleware, MongoDB indexes, and Admin AddModule filtering. Backend: 21/21 pytest passed. Frontend: All target flows verified. Fixed one minor stale hardcoded Sem2 count (10 -> 9) in NotesHub. Frontend required a manual restart to pick up updated index.html.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "NotesHub", "issue": "Sem2 card had hardcoded 'count: 10' after PT removal (should be 9). Fixed by testing agent.", "selector": "[data-testid='semester-card-2']", "priority": "MINOR"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration9_changes.py",
+    "/app/test_reports/pytest/iteration9_results.xml"
+  ],
+  "action_items": [
+    "After edits to /app/frontend/public/index.html, the frontend service must be restarted (sudo supervisorctl restart frontend) — hot reload does NOT reload static index.html changes. Testing agent restarted the service to verify iteration 9 meta tags are actually served.",
+    "Note: Cloudflare in front of preview URL adds its own content-encoding: gzip on responses. Backend GZipMiddleware(minimum_size=800) IS registered in server.py, but end-to-end verification through Cloudflare returns gzip regardless. This is fine.",
+    "Consider future-proofing NotesHub semester counts by deriving from API rather than hardcoding — currently fixed but any subject addition/removal will require another manual constant update."
+  ],
+  "critical_code_review_comments": [
+    "server.py is now 577 lines — approaching the 700-line threshold. Consider splitting into: routes/subjects.py, routes/files.py, routes/analytics.py, auth.py, storage.py.",
+    "analytics_trending has no time-window filtering (all-time counts). For a live tracker, a rolling 24h/7d aggregation would be more meaningful.",
+    "The Admin.jsx isDirectFilesSubject regex /\\b(lab|laboratory)\\b/i correctly excludes labs — verified in UI.",
+    "seed_if_empty always upserts credits on every startup (idempotent) — good practice for schema evolution.",
+    "DEPRECATED_SUBJECTS purge runs on every startup — good defensive cleanup. Verified working."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration9_changes.py",
+    "/app/frontend/src/pages/NotesHub.jsx"
+  ],
+  "success_rate": {"backend": "100% (21/21)", "frontend": "100% (all target flows verified)"},
+  "test_credentials": "yashadesh.13@gmail.com / Adesh@Bitverse2026 — verified working",
+  "seed_data_creation": "Test uploaded 2 dummy notes files (physics + chemistry) to verify live-tracker increments, then deleted them (soft-delete via is_deleted=true). Subject_stats increments (Physics +3 views, Chemistry +2 downloads) remain in DB — visible in trending chart.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iteration 9 fully verified. Backend has 21 tests in test_iteration9_changes.py covering: subject count=19, credits per spec, live-tracker real load, gzip encoding, MongoDB indexes, auth regression. Frontend restart was required to serve updated index.html meta tags. NotesHub had a stale hardcoded Sem2 count fixed to 9. All key UI checkpoints validated: syllabus 22/21.5 credits chips, Communication Skill-I 1.5 cr, Workshop 1 cr, no PT anywhere, trending chart with 8 bars + top-6 grid with rank badges, FileCard driveViewerUrl targets docs.google.com/viewer?url=, no /viewer/:fileId route usage, minHeight:40px tap targets, mobile PWA meta tags present, touch-action:manipulation on body, Admin AddModule dropdown filters out labs/PPS/Workshop/NSS/EngGraphics leaving exactly 10 module subjects.",
+  "rca_of_issue": "Frontend index.html changes are static assets served by CRA dev server — hot reload does NOT re-emit index.html. The initial curl showed only viewport meta but none of the apple-mobile/mobile-web-app tags. After 'sudo supervisorctl restart frontend', all meta tags served correctly. Root cause: hot reload only reprocesses source files under /src, not /public/index.html."
+}
