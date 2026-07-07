@@ -85,7 +85,7 @@ export default function Footer() {
             <li><Link to="/notes" className="hover:text-[#00E5D4]">Notes</Link></li>
             <li><Link to="/pyqs" className="hover:text-[#00E5D4]">Previous Year Questions</Link></li>
             <li><Link to="/syllabus" className="hover:text-[#00E5D4]">Syllabus</Link></li>
-            <li><Link to="/resources" className="hover:text-[#00E5D4]">YouTube Playlists</Link></li>
+            <li><Link to="/resources" className="hover:text-[#00E5D4]">Books</Link></li>
             <li><Link to="/about" className="hover:text-[#00E5D4]">About</Link></li>
           </ul>
         </div>

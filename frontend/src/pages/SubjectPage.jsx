@@ -1,67 +1,109 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { api, API } from "@/lib/api";
 import PageHeader from "@/components/PageHeader";
 import FileCard from "@/components/FileCard";
-import { FolderOpen, ChevronRight, ArrowLeft, GraduationCap, FileX2 } from "lucide-react";
+import { FolderOpen, ChevronRight, ArrowLeft, GraduationCap, FileX2, BookOpen, FileText, FlaskConical } from "lucide-react";
 
-const isLabName = (name) =>
-  /\b(lab|laboratory)\b/i.test(name || "");
+const DIRECT_FILE_SUBJECTS = new Set([
+  "Programming for Problem Solving",
+  "Workshop Practice",
+  "NSS",
+  "PT and Games",
+]);
+const BOOKS_SUBJECT = new Set(["Engineering Graphics"]);
+
+function classify(name = "") {
+  if (BOOKS_SUBJECT.has(name)) return "books";
+  if (/\b(lab|laboratory)\b/i.test(name)) return "lab";
+  if (DIRECT_FILE_SUBJECTS.has(name)) return "direct";
+  return "modules";
+}
+
+const SECTION_META = {
+  lab:    { label: "Lab Files",     Icon: FlaskConical },
+  direct: { label: "Notes",         Icon: FileText },
+  books:  { label: "Books",         Icon: BookOpen },
+};
 
 export default function SubjectPage() {
   const { subjectId } = useParams();
   const [subject, setSubject] = useState(null);
   const [modules, setModules] = useState([]);
-  const [labFiles, setLabFiles] = useState([]);
+  const [directFiles, setDirectFiles] = useState([]);
   const [tutorials, setTutorials] = useState([]);
+  const [books, setBooks] = useState([]);
 
   useEffect(() => {
     api.get(`/subjects/${subjectId}`).then(({ data }) => setSubject(data)).catch(() => {});
     api.get(`/subjects/${subjectId}/modules`).then(({ data }) => setModules(data)).catch(() => {});
-    api.get(`/files?category=notes&subject_id=${subjectId}`).then(({ data }) => setLabFiles(data)).catch(() => {});
+    // notes files uploaded WITHOUT module (direct to subject) — used for labs / direct subjects
+    api.get(`/files?category=notes&subject_id=${subjectId}`).then(({ data }) => setDirectFiles(data.filter(f => !f.module_id))).catch(() => {});
     api.get(`/files?category=tutorial&subject_id=${subjectId}`).then(({ data }) => setTutorials(data)).catch(() => {});
+    api.get(`/files?category=book&subject_id=${subjectId}`).then(({ data }) => setBooks(data)).catch(() => {});
   }, [subjectId]);
 
-  const isLab = isLabName(subject?.name);
+  const kind = classify(subject?.name);
+  const showModules = kind === "modules";
+  const primaryFiles = kind === "books" ? books : directFiles;
+  const primaryMeta = SECTION_META[kind] || null;
+
+  // Tutorials: ascending order (oldest first — Tutorial 1 → Tutorial 2 → …)
+  const tutorialsSorted = useMemo(
+    () => [...tutorials].sort((a, b) => (a.created_at || "").localeCompare(b.created_at || "")),
+    [tutorials]
+  );
 
   return (
     <div className="page-enter mx-auto max-w-6xl px-6 pt-28 md:pt-32">
       <Link
         to={subject ? `/notes/sem/${subject.semester}` : "/notes"}
         className="inline-flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-[#00E5D4] mb-6"
+        data-testid="subject-back"
       >
         <ArrowLeft className="w-4 h-4" /> Back
       </Link>
       <PageHeader
         chip={subject ? `Semester ${subject.semester}${subject.semester === 1 ? " (C)" : " (P)"}` : "Loading"}
         title={subject ? <>{subject.name}</> : "Loading..."}
-        subtitle={isLab ? "All lab files uploaded for this subject." : "Choose a module to open its files."}
+        subtitle={
+          showModules
+            ? "Choose a module to open its files."
+            : kind === "books"
+            ? "Book references and study material for this subject."
+            : "All files uploaded for this subject."
+        }
         testid="subject-header"
       />
 
-      {/* LAB SUBJECTS: direct files, no modules */}
-      {isLab && (
-        <section className="mt-10">
+      {/* Direct-file subjects: labs, PPS, Workshop, NSS, PT, Engineering Graphics (books) */}
+      {!showModules && primaryMeta && (
+        <section className="mt-10" data-testid={`section-${kind}`}>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display text-xl font-semibold">Lab Files</h2>
-            <span className="chip">{labFiles.filter(f => !f.module_id).length} Files</span>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#00E5D4]/10 border border-[#00E5D4]/30">
+                <primaryMeta.Icon className="w-5 h-5 text-[#00E5D4]" />
+              </div>
+              <h2 className="font-display text-xl font-semibold">{primaryMeta.label}</h2>
+            </div>
+            <span className="chip">{primaryFiles.length} Files</span>
           </div>
           <div className="space-y-3">
-            {labFiles.filter(f => !f.module_id).map((f) => (
+            {primaryFiles.map((f) => (
               <FileCard key={f.id} file={f} apiBase={API} />
             ))}
-            {labFiles.filter(f => !f.module_id).length === 0 && (
+            {primaryFiles.length === 0 && (
               <div className="card-glass p-12 flex flex-col items-center gap-3 text-center">
                 <FileX2 className="w-10 h-10 text-[#00E5D4]/60" />
-                <p className="text-white/70">No lab files yet.</p>
+                <p className="text-white/70">No {primaryMeta.label.toLowerCase()} uploaded yet.</p>
               </div>
             )}
           </div>
         </section>
       )}
 
-      {/* NON-LAB: Modules grid */}
-      {!isLab && (
+      {/* Modules for regular subjects */}
+      {showModules && (
         <section className="mt-10">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-display text-xl font-semibold">Modules</h2>
@@ -87,15 +129,13 @@ export default function SubjectPage() {
               </Link>
             ))}
             {modules.length === 0 && (
-              <div className="col-span-full text-center text-white/50 text-sm py-16">
-                No modules yet.
-              </div>
+              <div className="col-span-full text-center text-white/50 text-sm py-16">No modules yet.</div>
             )}
           </div>
         </section>
       )}
 
-      {/* TUTORIALS SECTION — for every subject, shown after modules */}
+      {/* TUTORIALS — for every subject, ascending order 1 → N */}
       <section className="mt-16" data-testid="tutorials-section">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -104,19 +144,24 @@ export default function SubjectPage() {
             </div>
             <div>
               <h2 className="font-display text-xl font-semibold">Tutorials</h2>
-              <div className="text-xs font-mono text-white/50">Extra practice, tutorial sheets & handouts</div>
+              <div className="text-xs font-mono text-white/50">Ordered from Tutorial 1 → {Math.max(tutorialsSorted.length, 1)}</div>
             </div>
           </div>
-          <span className="chip">{tutorials.length} Files</span>
+          <span className="chip">{tutorialsSorted.length} Files</span>
         </div>
         <div className="space-y-3">
-          {tutorials.map((f) => (
-            <FileCard key={f.id} file={f} apiBase={API} />
-          ))}
-          {tutorials.length === 0 && (
-            <div className="card-glass p-8 text-center text-white/60 text-sm">
-              No tutorials uploaded yet.
+          {tutorialsSorted.map((f, i) => (
+            <div key={f.id} className="flex items-center gap-3" data-testid={`tutorial-item-${i + 1}`}>
+              <span className="w-9 h-9 rounded-lg bg-[#00E5D4]/10 border border-[#00E5D4]/30 flex items-center justify-center font-mono text-[#00E5D4] text-sm shrink-0">
+                {i + 1}
+              </span>
+              <div className="flex-1 min-w-0">
+                <FileCard file={f} apiBase={API} />
+              </div>
             </div>
+          ))}
+          {tutorialsSorted.length === 0 && (
+            <div className="card-glass p-8 text-center text-white/60 text-sm">No tutorials uploaded yet.</div>
           )}
         </div>
       </section>

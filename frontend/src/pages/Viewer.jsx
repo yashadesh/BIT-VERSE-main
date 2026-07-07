@@ -38,12 +38,13 @@ export default function Viewer() {
   const isPdf = ext === "pdf";
   const isImage = ["png", "jpg", "jpeg", "webp", "gif"].includes(ext);
   const isOffice = ["ppt", "pptx", "doc", "docx", "xls", "xlsx"].includes(ext);
-  // Google Docs Viewer works on ALL devices (mobile + desktop) for PDF/Office
+  // Google Docs Viewer (drive-like) works on all devices for PDF/Office — used universally
   const gviewUrl = `https://docs.google.com/gview?url=${encodeURIComponent(rawUrl)}&embedded=true`;
   const officeUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(rawUrl)}`;
 
-  // PDF strategy: on mobile use Google Docs viewer (renders in iframe like Drive), on desktop use native iframe
-  const pdfSrc = mobile ? gviewUrl : rawUrl;
+  // PDF & Office: use Google Docs Viewer everywhere (mobile + desktop) for consistent Drive-like UX
+  const pdfSrc = gviewUrl;
+  const officeSrc = mobile ? gviewUrl : officeUrl;
 
   return (
     <div className="fixed inset-0 z-50 bg-[#05070A] flex flex-col" data-testid="file-viewer">
@@ -105,7 +106,7 @@ export default function Viewer() {
         {isOffice && (
           <iframe
             title="office-preview"
-            src={mobile ? gviewUrl : officeUrl}
+            src={officeSrc}
             className="w-full h-full border-0"
             allow="fullscreen"
           />

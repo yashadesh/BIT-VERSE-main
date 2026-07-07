@@ -7,7 +7,7 @@ const links = [
   { to: "/notes", label: "Notes" },
   { to: "/pyqs", label: "PYQs" },
   { to: "/syllabus", label: "Syllabus" },
-  { to: "/resources", label: "Resources" },
+  { to: "/resources", label: "Books" },
   { to: "/about", label: "About" },
 ];
 

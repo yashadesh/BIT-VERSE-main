@@ -5,7 +5,7 @@ const tabs = [
   { to: "/notes", label: "Notes", emoji: "📚", test: "mobile-nav-notes" },
   { to: "/pyqs", label: "PYQs", emoji: "📄", test: "mobile-nav-pyqs" },
   { to: "/syllabus", label: "Syllabus", emoji: "📖", test: "mobile-nav-syllabus" },
-  { to: "/resources", label: "Res", emoji: "🎥", test: "mobile-nav-resources" },
+  { to: "/resources", label: "Books", emoji: "📕", test: "mobile-nav-resources" },
 ];
 
 export default function MobileNav() {

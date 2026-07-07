@@ -11,11 +11,19 @@ const TABS = [
   { key: "tutorial", label: "Tutorials", Icon: GraduationCap },
   { key: "pyq", label: "PYQs", Icon: FileText },
   { key: "syllabus", label: "Syllabus", Icon: FileArchive },
-  { key: "resource", label: "YouTube Playlists", Icon: LinkIcon },
+  { key: "book", label: "Books", Icon: LinkIcon },
   { key: "manage", label: "Manage", Icon: FolderPlus },
 ];
 
-const isLabName = (name) => /\b(lab|laboratory)\b/i.test(name || "");
+const DIRECT_FILE_SUBJECTS = new Set([
+  "Programming for Problem Solving",
+  "Workshop Practice",
+  "NSS",
+  "PT and Games",
+  "Engineering Graphics",
+]);
+const isDirectFilesSubject = (name) =>
+  /\b(lab|laboratory)\b/i.test(name || "") || DIRECT_FILE_SUBJECTS.has(name);
 
 export default function Admin() {
   const [tab, setTab] = useState("notes");
@@ -31,7 +39,7 @@ export default function Admin() {
     setSubjects([...s1.data, ...s2.data]);
     const f = await api.get("/files");
     setFiles(f.data);
-    const r = await api.get("/resources?resource_type=youtube");
+    const r = await api.get("/resources?resource_type=book");
     setResources(r.data);
   };
   useEffect(() => { loadAll(); }, []);
@@ -81,8 +89,11 @@ export default function Admin() {
         {tab === "syllabus" && (
           <UploadSyllabus refresh={loadAll} />
         )}
-        {tab === "resource" && (
-          <AddYouTubePlaylist refresh={loadAll} />
+        {tab === "book" && (
+          <>
+            <UploadBookFile subjects={subjects} refresh={loadAll} />
+            <AddBookLink subjects={subjects} refresh={loadAll} />
+          </>
         )}
         {tab === "manage" && (
           <>
@@ -91,8 +102,8 @@ export default function Admin() {
           </>
         )}
 
-        {tab !== "resource" && <ListFiles files={files} tab={tab} refresh={loadAll} />}
-        {tab === "resource" && <ListResources resources={resources} refresh={loadAll} />}
+        {tab !== "book" && <ListFiles files={files} tab={tab} refresh={loadAll} />}
+        {tab === "book" && <ListResources resources={resources} refresh={loadAll} />}
       </div>
     </div>
   );
@@ -125,19 +136,19 @@ function UploadNotes({ subjects, modules, onSubject, refresh }) {
   const [busy, setBusy] = useState(false);
 
   const currentSubject = subjects.find((s) => s.id === subjectId);
-  const isLab = isLabName(currentSubject?.name);
+  const isDirect = isDirectFilesSubject(currentSubject?.name);
 
   const submit = async (e) => {
     e.preventDefault();
     if (!subjectId || !file) return toast.error("Select subject and file");
-    if (!isLab && !moduleId) return toast.error("Select a module");
+    if (!isDirect && !moduleId) return toast.error("Select a module");
     setBusy(true);
     try {
       const fd = new FormData();
       fd.append("file", file);
       fd.append("category", "notes");
       fd.append("subject_id", subjectId);
-      if (moduleId && !isLab) fd.append("module_id", moduleId);
+      if (moduleId && !isDirect) fd.append("module_id", moduleId);
       if (name) fd.append("display_name", name);
       await api.post("/upload", fd);
       toast.success("Notes uploaded");
@@ -158,8 +169,8 @@ function UploadNotes({ subjects, modules, onSubject, refresh }) {
             ))}
           </select>
         </Field>
-        {isLab ? (
-          <div className="mb-4 chip">Lab subject — files upload directly (no modules)</div>
+        {isDirect ? (
+          <div className="mb-4 chip">Direct-file subject — no modules needed</div>
         ) : (
           <Field label="Module">
             <select className={inp} value={moduleId} onChange={(e)=>setModuleId(e.target.value)} data-testid="admin-notes-module">
@@ -335,6 +346,60 @@ function UploadSyllabus({ refresh }) {
 }
 
 function AddYouTubePlaylist({ refresh }) {
+  return null;
+}
+
+function UploadBookFile({ subjects, refresh }) {
+  const [subjectId, setSubjectId] = useState("");
+  const [file, setFile] = useState(null);
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!subjectId || !file) return toast.error("Select subject and file");
+    setBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("category", "book");
+      fd.append("subject_id", subjectId);
+      if (name) fd.append("display_name", name);
+      await api.post("/upload", fd);
+      toast.success("Book uploaded");
+      setFile(null); setName("");
+      refresh();
+    } catch { toast.error("Upload failed"); }
+    setBusy(false);
+  };
+
+  return (
+    <GlassBox title="Upload Book PDF" testid="admin-upload-book">
+      <form onSubmit={submit}>
+        <Field label="Subject">
+          <select className={inp} value={subjectId} onChange={(e)=>setSubjectId(e.target.value)} data-testid="admin-book-subject">
+            <option value="">Select subject…</option>
+            {subjects.map((s) => (
+              <option key={s.id} value={s.id}>Sem {s.semester}{s.semester === 1 ? " (C)" : " (P)"} · {s.name}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Book Title (optional)">
+          <input className={inp} value={name} onChange={(e)=>setName(e.target.value)} placeholder="e.g., NCERT Chemistry Vol. 1" data-testid="admin-book-name" />
+        </Field>
+        <Field label="File">
+          <input type="file" onChange={(e)=>setFile(e.target.files?.[0] || null)} className={inp} data-testid="admin-book-file" />
+        </Field>
+        <button type="submit" className="btn-neon primary w-full" disabled={busy} data-testid="admin-book-submit">
+          <Upload className="w-4 h-4" /> {busy ? "Uploading…" : "Upload Book"}
+        </button>
+      </form>
+    </GlassBox>
+  );
+}
+
+function AddBookLink({ subjects, refresh }) {
+  const [subjectId, setSubjectId] = useState("");
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
   const [desc, setDesc] = useState("");
@@ -342,16 +407,17 @@ function AddYouTubePlaylist({ refresh }) {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!title || !url) return toast.error("Title and URL required");
+    if (!subjectId || !title || !url) return toast.error("Subject, title and URL required");
     setBusy(true);
     try {
       const fd = new FormData();
       fd.append("title", title);
       fd.append("url", url);
-      fd.append("resource_type", "youtube");
-      fd.append("description", desc);
+      fd.append("resource_type", "book");
+      // Tag with subject id in description prefix for subject-wise grouping on Resources page
+      fd.append("description", `[${subjectId}]:: ${desc}`.trim());
       await api.post("/resources", fd);
-      toast.success("YouTube playlist added");
+      toast.success("Book link added");
       setTitle(""); setUrl(""); setDesc("");
       refresh();
     } catch { toast.error("Failed"); }
@@ -359,19 +425,27 @@ function AddYouTubePlaylist({ refresh }) {
   };
 
   return (
-    <GlassBox title="Add YouTube Playlist" testid="admin-add-link">
+    <GlassBox title="Add Book Link" testid="admin-add-book-link">
       <form onSubmit={submit}>
-        <Field label="Playlist Title">
-          <input className={inp} value={title} onChange={(e)=>setTitle(e.target.value)} placeholder="e.g., Full Chemistry Semester 1" data-testid="admin-link-title" />
+        <Field label="Subject">
+          <select className={inp} value={subjectId} onChange={(e)=>setSubjectId(e.target.value)} data-testid="admin-book-link-subject">
+            <option value="">Select subject…</option>
+            {subjects.map((s) => (
+              <option key={s.id} value={s.id}>Sem {s.semester}{s.semester === 1 ? " (C)" : " (P)"} · {s.name}</option>
+            ))}
+          </select>
         </Field>
-        <Field label="YouTube URL">
-          <input className={inp} value={url} onChange={(e)=>setUrl(e.target.value)} placeholder="https://youtube.com/playlist?list=…" data-testid="admin-link-url" />
+        <Field label="Book Title">
+          <input className={inp} value={title} onChange={(e)=>setTitle(e.target.value)} placeholder="e.g., HC Verma — Concepts of Physics" data-testid="admin-book-link-title" />
+        </Field>
+        <Field label="URL">
+          <input className={inp} value={url} onChange={(e)=>setUrl(e.target.value)} placeholder="https://…" data-testid="admin-book-link-url" />
         </Field>
         <Field label="Description (optional)">
-          <textarea className={inp} value={desc} onChange={(e)=>setDesc(e.target.value)} rows={2} data-testid="admin-link-desc" />
+          <textarea className={inp} value={desc} onChange={(e)=>setDesc(e.target.value)} rows={2} data-testid="admin-book-link-desc" />
         </Field>
-        <button type="submit" className="btn-neon primary w-full" disabled={busy} data-testid="admin-link-submit">
-          <Plus className="w-4 h-4" /> {busy ? "Adding…" : "Add Playlist"}
+        <button type="submit" className="btn-neon primary w-full" disabled={busy} data-testid="admin-book-link-submit">
+          <Plus className="w-4 h-4" /> {busy ? "Adding…" : "Add Book Link"}
         </button>
       </form>
     </GlassBox>
@@ -450,7 +524,7 @@ function AddModule({ subjects, modules, onSubject, refresh }) {
         <Field label="Subject">
           <select className={inp} value={subjectId} onChange={(e)=>{setSubjectId(e.target.value); onSubject(e.target.value);}} data-testid="admin-module-subject">
             <option value="">Select subject…</option>
-            {subjects.filter(s => !isLabName(s.name)).map((s) => (<option key={s.id} value={s.id}>Sem {s.semester}{s.semester === 1 ? " (C)" : " (P)"} · {s.name}</option>))}
+            {subjects.filter(s => !isDirectFilesSubject(s.name)).map((s) => (<option key={s.id} value={s.id}>Sem {s.semester}{s.semester === 1 ? " (C)" : " (P)"} · {s.name}</option>))}
           </select>
         </Field>
         <Field label="Name"><input className={inp} value={name} onChange={(e)=>setName(e.target.value)} placeholder="e.g., Module 6" data-testid="admin-module-name" /></Field>
@@ -507,7 +581,7 @@ function ListResources({ resources, refresh }) {
     refresh();
   };
   return (
-    <GlassBox title={`YouTube Playlists (${resources.length})`} testid="admin-resource-list">
+    <GlassBox title={`Book Links (${resources.length})`} testid="admin-resource-list">
       <div className="space-y-2 max-h-[560px] overflow-y-auto pr-1">
         {resources.map((r) => (
           <div key={r.id} className="file-row" data-testid={`admin-resource-${r.id}`}>
@@ -523,7 +597,7 @@ function ListResources({ resources, refresh }) {
             </button>
           </div>
         ))}
-        {resources.length === 0 && (<div className="text-white/50 text-sm text-center py-8">No playlists yet.</div>)}
+        {resources.length === 0 && (<div className="text-white/50 text-sm text-center py-8">No book links yet.</div>)}
       </div>
     </GlassBox>
   );

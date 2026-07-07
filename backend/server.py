@@ -135,14 +135,14 @@ class ResourceLink(BaseModel):
 # ── Seed ─────────────────────────────────────────────────────────────────────
 SEM1_SUBJECTS = [
     ("Environmental Science", 2),
-    ("Chemistry", 4),
+    ("Chemistry", 3.5),
     ("Chemistry Lab", 1),
     ("Basic Electronics", 3),
     ("Basic Electronics Lab", 1),
     ("Mathematics-I", 4),
     ("Basics of Mechanical Engineering", 3),
     ("Engineering Graphics", 2),
-    ("Workshop Practice", 2),
+    ("Workshop Practice", 1.5),
     ("NSS", 1),
 ]
 SEM2_SUBJECTS = [
@@ -155,12 +155,19 @@ SEM2_SUBJECTS = [
     ("Mathematics-II", 4),
     ("Physics", 4),
     ("Physics Lab", 1),
-    ("PT and Games", 1),
+    ("PT and Games", 1.5),
 ]
 
 async def seed_if_empty():
     count = await db.subjects.count_documents({})
     if count > 0:
+        # Always sync credits to canonical values (idempotent)
+        for sem, arr in [(1, SEM1_SUBJECTS), (2, SEM2_SUBJECTS)]:
+            for name, credits in arr:
+                await db.subjects.update_one(
+                    {"name": name, "semester": sem},
+                    {"$set": {"credits": credits}},
+                )
         return
     logging.info("Seeding BITVERSE database...")
     for sem, arr in [(1, SEM1_SUBJECTS), (2, SEM2_SUBJECTS)]:
@@ -398,16 +405,7 @@ async def analytics_trending(limit: int = 8):
             "score": score,
         })
 
-    # Per-row fallback: fill zero-activity rows with deterministic demo values so
-    # the chart always looks populated, while preserving real activity where present.
-    import hashlib
-    for r in rows:
-        if r["score"] == 0:
-            h = int(hashlib.md5(r["name"].encode()).hexdigest(), 16)
-            r["views"] = (h % 240) + 60          # 60–300
-            r["downloads"] = (h % 90) + 20        # 20–110
-            r["score"] = r["views"] + r["downloads"] * 2
-
+    # Real-time server load only — no demo values. Chart reflects actual usage.
     rows.sort(key=lambda x: x["score"], reverse=True)
     return {"trending": rows[:limit], "total_subjects": len(rows)}
 

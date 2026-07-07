@@ -25,7 +25,7 @@ function AnimatedCounter({ target, suffix = "+", label, testid }) {
   }, [target]);
   return (
     <div className="card-glass p-6 md:p-8 text-center animate-fade-up" data-testid={testid}>
-      <div className="font-display text-4xl md:text-5xl font-bold neon-text">
+      <div className="font-display text-4xl md:text-5xl font-bold neon-text tabular-nums">
         {n.toLocaleString()}{suffix}
       </div>
       <div className="mt-2 text-xs md:text-sm tracking-[0.2em] uppercase font-mono text-white/60">
@@ -39,19 +39,20 @@ const quickCards = [
   { to: "/notes", title: "Notes", desc: "Semester-wise structured notes for every subject.", Icon: BookOpen, test: "quick-notes" },
   { to: "/pyqs", title: "PYQs", desc: "Previous year mid-sems, end-sems and solutions.", Icon: FileText, test: "quick-pyqs" },
   { to: "/syllabus", title: "Syllabus", desc: "Complete first-year curriculum & credit sheet.", Icon: ScrollText, test: "quick-syllabus" },
-  { to: "/resources", title: "Resources", desc: "Curated books, videos, coding & links.", Icon: Youtube, test: "quick-resources" },
+  { to: "/resources", title: "Books", desc: "Subject-wise reference books & study material.", Icon: BookMarked, test: "quick-resources" },
 ];
 
 export default function Home() {
-  const [stats, setStats] = useState({ notes: 5000, pyqs: 1000, subjects: 20, students: 1000 });
+  const [stats, setStats] = useState({ files: 0, subjects: 20, modules: 100, semesters: 2 });
   useEffect(() => {
     api.get("/stats").then(({ data }) => {
-      setStats({
-        notes: Math.max(data.notes, 5000),
-        pyqs: Math.max(data.pyqs, 1000),
-        subjects: Math.max(data.subjects, 20),
-        students: Math.max(data.students, 1000),
-      });
+      setStats((s) => ({
+        ...s,
+        files: data.notes + data.pyqs || 0,
+        subjects: data.subjects || 20,
+        modules: 100,
+        semesters: 2,
+      }));
     }).catch(() => {});
   }, []);
 
@@ -114,10 +115,10 @@ export default function Home() {
       <section className="relative px-6 py-16 md:py-24" data-testid="stats-section">
         <div className="mx-auto max-w-6xl">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-            <AnimatedCounter target={stats.notes} label="Notes" testid="stats-counter-notes" />
-            <AnimatedCounter target={stats.pyqs} label="PYQs" testid="stats-counter-pyqs" />
-            <AnimatedCounter target={stats.subjects} label="Subjects" testid="stats-counter-subjects" />
-            <AnimatedCounter target={stats.students} label="Students" testid="stats-counter-students" />
+            <AnimatedCounter target={stats.subjects} suffix="" label="Subjects" testid="stats-counter-subjects" />
+            <AnimatedCounter target={stats.modules} suffix="+" label="Modules" testid="stats-counter-modules" />
+            <AnimatedCounter target={stats.semesters} suffix="" label="Semesters" testid="stats-counter-semesters" />
+            <AnimatedCounter target={stats.files} suffix="" label="Files Live" testid="stats-counter-files" />
           </div>
         </div>
       </section>

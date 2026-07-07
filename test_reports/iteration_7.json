@@ -1,0 +1,65 @@
+{
+  "summary": "Iteration 7 multi-part change set fully verified. Backend: 18/18 new pytest tests PASS covering (1) credits sums Sem1=22, Sem2=22.5 and every individual subject credit value, (2) real-time /api/analytics/trending returning score==views+2*downloads with NO hash-based demo values (rows with 0 activity return score=0 and sort last), (3) POST /api/upload with category=book, (4) POST /api/resources with resource_type=book & subject-prefix description, (5) direct-file notes upload without module_id for Workshop Practice, (6) 3-tutorial ascending ordering by created_at, (7) regression on /api/stats, /api/subjects=20, and asset endpoints /assets/bitverse-logo.png + /assets/adesh-yash.png. Frontend Playwright: Syllabus page shows '22 Credits' & '22.5 Credits' chips, Home stats cards show Subjects/Modules/Semesters/Files Live with NO '5000+/1000+/Students' strings, Navbar has 'Books' link (no 'Resources'), Footer QuickLinks has 'Books', Mobile bottom nav shows '📕 Books' tab, /resources page shows 20 subject rows (data-testid=book-subject-<id>) with click-to-expand working, /admin has exactly 6 tabs incl 'Books' (no YouTube tab), Book tab renders admin-upload-book + admin-add-book-link forms. Subject classification verified: Chemistry→Modules, Chemistry Lab→section-lab (Lab Files), PPS→section-direct (Notes), Engineering Graphics→section-books (Books). Viewer for PDF confirmed to use `https://docs.google.com/gview?url=...&embedded=true` on BOTH desktop (1920px) and mobile (390px). Tutorial ordering: uploaded 3 TEST_UI PDFs via API with 1.2s spacing to Physics subject, DOM inspection showed them appearing as items 6/7/8 in ascending upload order with correct numeric badges — feature works as specified.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "/api/stats",
+        "issue": "Still returns hard-coded 'students': 1000. Home UI no longer displays it (removed per spec), so not user-visible, but the field remains in the JSON. Consider removing it or making it dynamic for cleanliness."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "TrendingChart (Home)",
+        "issues": [
+          "Non-blocking recharts DevTools warning still present: 'The width(-1) and height(-1) of chart should be greater than 0' before ResponsiveContainer measures. Same finding as iterations 5/6 — cosmetic only; add min-height:360px on the wrapper to silence."
+        ]
+      },
+      {
+        "screen": "Admin footer copy",
+        "issues": [
+          "Admin PageHeader subtitle still reads 'curate YouTube playlists' (Admin.jsx L59) — copy is stale since the YouTube tab was removed. Minor text update needed."
+        ]
+      },
+      {
+        "screen": "Footer main paragraph",
+        "issues": [
+          "Footer.jsx L74-77 still mentions '… tutorials and YouTube playlists — all in one beautiful place.' Copy is stale post-YouTube removal; should say 'books' instead."
+        ]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration7_changes.py",
+    "/app/test_reports/pytest/iter7_results.xml"
+  ],
+  "action_items": [
+    "OPTIONAL: Remove hard-coded 'students': 1000 from /api/stats (or drop the field) for consistency with the 'no fake numbers' spec (Home already ignores it).",
+    "OPTIONAL: Update Admin subtitle in Admin.jsx (L59) from '…curate YouTube playlists' to '…curate books & subject material'.",
+    "OPTIONAL: Update Footer copy (Footer.jsx L77) from 'tutorials and YouTube playlists' to 'tutorials and books'.",
+    "OPTIONAL (unchanged from iter 5/6): silence recharts width(-1)/height(-1) warnings by adding min-height:360px on the ResponsiveContainer wrapper in TrendingChart.jsx.",
+    "OPTIONAL: The dead `AddYouTubePlaylist` component in Admin.jsx (L348-350) returns null — can be deleted."
+  ],
+  "critical_code_review_comments": [
+    "seed_if_empty() now correctly syncs credits idempotently on every startup — good defensive design (server.py L162-170).",
+    "analytics_trending is now clean real-only aggregation (server.py L383-410); score formula matches spec (v + 2*d) and rows with zero activity properly sort last after descending sort.",
+    "SubjectPage.classify() uses BOOKS_SUBJECT precedence before lab regex — correct, otherwise 'Engineering Graphics' would fall through. Well-designed.",
+    "Resources.jsx uses `[subjectId]::` description prefix to group book links — pragmatic given no subject_id field on ResourceLink model. Consider adding an explicit optional subject_id column on resources for cleaner data long-term.",
+    "Admin.jsx isDirectFilesSubject() is duplicated from SubjectPage classify() logic — extract into a shared util (e.g., /lib/subjectClassify.js) to keep the two in sync.",
+    "Viewer.jsx now uses gviewUrl unconditionally for PDFs on all viewports — matches Drive-style UX requirement. The `isMobile` state is now only consumed by officeSrc; keep an eye on it for dead code cleanup.",
+    "Admin.jsx: dead component AddYouTubePlaylist (returns null) left behind after tab removal — safe to delete."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration7_changes.py (new — 18 test cases)"
+  ],
+  "success_rate": {"backend": "100% (18/18 pytest tests)", "frontend": "100% (all 17 UI assertions pass)"},
+  "seed_data_creation": "3 tutorial PDFs uploaded to Physics subject during UI ordering test (TEST_UI_Tut_0/1/2), all cleaned up. 1 book PDF and 1 book resource-link created during API tests, both cleaned up.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All iteration_7 acceptance criteria verified end-to-end. Backend seeding is idempotent — credits sync on every server start. Home stats state initializes to {subjects:20, modules:100, semesters:2, files:0} and updates from /api/stats. TrendingChart still emits harmless width(-1)/height(-1) warnings before ResponsiveContainer measures. Three minor stale-copy strings referencing 'YouTube' remain (Admin subtitle, Footer paragraph, dead AddYouTubePlaylist component) but do NOT affect any user-visible feature. Existing test file /app/backend/tests/test_trending_and_assets.py contains outdated `assert score>0` assertions that are now incompatible with the new real-only trending (score can legitimately be 0). Recommend deprecating or updating it if regression suite includes it.",
+  "rca_of_the_issue": "N/A — no bugs found in this iteration's change set."
+}
