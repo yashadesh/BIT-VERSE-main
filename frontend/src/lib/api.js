@@ -1,9 +1,17 @@
-import axios from "axios";
+import axios from 'axios';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-export const API = `${BACKEND_URL}/api`;
+// Dynamically use the production Render URL or fallback to localhost during local testing
+const API_BASE_URL = 
+  process.env.REACT_APP_API_URL || 
+  process.env.NEXT_PUBLIC_API_URL || 
+  'https://bitverse-backend.onrender.com';
 
-export const api = axios.create({ baseURL: API });
+export const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  withCredentials: true,
+});
 
-export const LOGO_URL = "/assets/bitverse-logo.png";
-export const DEV_PHOTO_URL = "/assets/adesh-yash.png";
+export default api;
