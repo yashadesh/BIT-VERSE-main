@@ -15,7 +15,21 @@ import Syllabus from "@/pages/Syllabus";
 import Resources from "@/pages/Resources";
 import About from "@/pages/About";
 import Admin from "@/pages/Admin";
+import AdminLogin from "@/pages/AdminLogin";
 import Viewer from "@/pages/Viewer";
+import { useAuth } from "@/lib/auth";
+
+function AdminGate() {
+  const { isAuthenticated, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center text-white/60" data-testid="admin-loading">
+        Checking session…
+      </div>
+    );
+  }
+  return isAuthenticated ? <Admin /> : <AdminLogin />;
+}
 
 export default function App() {
   return (
@@ -35,7 +49,7 @@ export default function App() {
             <Route path="/syllabus" element={<Syllabus />} />
             <Route path="/resources" element={<Resources />} />
             <Route path="/about" element={<About />} />
-            <Route path="/admin" element={<Admin />} />
+            <Route path="/admin" element={<AdminGate />} />
             <Route path="/viewer/:fileId" element={<Viewer />} />
           </Routes>
         </main>

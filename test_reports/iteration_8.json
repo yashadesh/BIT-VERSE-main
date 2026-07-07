@@ -1,0 +1,34 @@
+{
+  "summary": "Iteration 8 — single-admin JWT auth layer. Backend: 33/33 pytest cases PASSED covering login (success + wrong pw + unknown email + case-insensitive), /auth/me (with/without/malformed/forged token, no Bearer), all 9 protected mutating endpoints returning 401 without token, forged-signature rejection, upload+resource create+delete with valid Bearer, all public GET endpoints still open, credits Sem1=22 / Sem2=22.5 regression. Frontend: /admin renders AdminLogin when unauth, wrong-password shows admin-login-error 'Invalid credentials', correct login shows Manage dashboard with admin-signed-in-as chip=yashadesh.13@gmail.com, token persisted in localStorage.bitverse_admin_token, reload keeps session, Sign Out clears token and returns to login, notes upload with Bearer token succeeds (TEST_iter8_frontend_upload appears in Uploaded list). Auth layer is production-ready.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Admin dashboard", "issues": ["React hydration warning in browser console: '<span> cannot be a child of <option>' — comes from the dev overlay/instrumentation wrapping <option> children in a <span data-ve-dynamic>. Cosmetic only, does not affect functionality but pollutes console. Consider suppressing or restructuring option children."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_auth.py",
+    "/app/test_reports/pytest/iter8_auth.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py auth is clean — bcrypt password hash (starts with $2b$), idempotent seed_admin() rotates password if env changes, JWT HS256 with sub+role+exp+iat, require_admin checks role AND sub matches ADMIN_EMAIL. Good.",
+    "LoginBody has no rate-limit / brute-force lockout. For a public single-owner console this is a minor risk; consider a simple IP-based lockout after 5 fails if the site gets scraped. Not required for MVP.",
+    "JWT_SECRET is fine (64 hex chars, well above the 32-byte HMAC minimum).",
+    "Token is stored in localStorage (susceptible to XSS). For single-admin site it's acceptable; httpOnly cookie would be more secure but requires CORS-with-credentials + CSRF handling. Not a blocker.",
+    "Frontend AuthProvider correctly clears localStorage on 401 from /auth/me, so stale tokens self-heal. Good.",
+    "Admin.jsx is 618 lines with 9 sub-forms — consider splitting into /pages/admin/*.jsx modules for maintainability. Not blocking."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_auth.py (new — 33 tests, all passing)"
+  ],
+  "success_rate": {"backend": "100% (33/33)", "frontend": "100% (login, wrong-pw error, dashboard, session persistence, logout, authenticated upload all verified)"},
+  "test_credentials": "ADMIN_EMAIL=yashadesh.13@gmail.com / ADMIN_PASSWORD=Adesh@Bitverse2026 (from /app/memory/test_credentials.md — verified working)",
+  "seed_data_creation": "None persisted — one TEST_iter8_frontend_upload PDF was uploaded via UI to verify authenticated flow, then deleted via API. One TEST_book_iter8 resource created+deleted in pytest. Database left clean.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Auth layer is fully working. Reusable test file at /app/backend/tests/test_auth.py covers login + protected/public endpoint matrix. For future iterations, always import admin_token fixture from that file or replicate the login call. All prior iteration tests (test_iteration7_changes.py, test_trending_and_assets.py) still valid and were not re-run this iteration (per E1's directive).",
+  "rca of the issue": "No bugs found."
+}

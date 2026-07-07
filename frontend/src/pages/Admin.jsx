@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { api, API } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import PageHeader from "@/components/PageHeader";
 import {
-  Upload, Plus, Trash2, FileText, FolderPlus, LinkIcon, BookOpen, FileArchive, GraduationCap,
+  Upload, Plus, Trash2, FileText, FolderPlus, LinkIcon, BookOpen, FileArchive, GraduationCap, LogOut, ShieldCheck,
 } from "lucide-react";
 
 const TABS = [
@@ -26,6 +27,7 @@ const isDirectFilesSubject = (name) =>
   /\b(lab|laboratory)\b/i.test(name || "") || DIRECT_FILE_SUBJECTS.has(name);
 
 export default function Admin() {
+  const { user, logout } = useAuth();
   const [tab, setTab] = useState("notes");
   const [subjects, setSubjects] = useState([]);
   const [modules, setModules] = useState([]);
@@ -52,12 +54,27 @@ export default function Admin() {
 
   return (
     <div className="page-enter mx-auto max-w-6xl px-6 pt-28 md:pt-32">
-      <PageHeader
-        chip="Admin Dashboard"
-        title={<>Manage the <span className="text-[#00E5D4]">library</span></>}
-        subtitle="Upload files, add subjects & modules, and curate books & subject material. Open access — no login."
-        testid="admin-header"
-      />
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-2">
+        <PageHeader
+          chip="Admin Dashboard"
+          title={<>Manage the <span className="text-[#00E5D4]">library</span></>}
+          subtitle="Upload files, add subjects & modules, and curate books & subject material."
+          testid="admin-header"
+        />
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="chip" data-testid="admin-signed-in-as">
+            <ShieldCheck className="w-3 h-3" /> {user?.email || "admin"}
+          </div>
+          <button
+            onClick={logout}
+            className="btn-neon"
+            style={{ padding: "0.5rem 1rem", fontSize: "0.7rem" }}
+            data-testid="admin-logout"
+          >
+            <LogOut className="w-3.5 h-3.5" /> Sign Out
+          </button>
+        </div>
+      </div>
 
       <div className="mt-8 flex flex-wrap gap-2">
         {TABS.map(({ key, label, Icon }) => (

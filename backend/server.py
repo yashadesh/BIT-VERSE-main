@@ -1,7 +1,7 @@
 """BITVERSE Backend - Premium Academic Library for BIT Mesra First Year
 FastAPI + MongoDB + Emergent Object Storage
 """
-from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Form, Response, Query
+from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Form, Response, Query, Depends, Request
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -11,10 +11,12 @@ import uuid
 import logging
 import mimetypes
 import requests
+import bcrypt
+import jwt as pyjwt
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -87,6 +89,85 @@ def get_object(path: str):
 # ── App ──────────────────────────────────────────────────────────────────────
 app = FastAPI(title="BITVERSE API")
 api_router = APIRouter(prefix="/api")
+
+# ── Auth ─────────────────────────────────────────────────────────────────────
+JWT_ALGORITHM = "HS256"
+JWT_SECRET = os.environ.get("JWT_SECRET", "change-me-in-env")
+ADMIN_EMAIL = (os.environ.get("ADMIN_EMAIL") or "").strip().lower()
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD") or ""
+
+def _hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+def _verify_password(password: str, hashed: str) -> bool:
+    try:
+        return bcrypt.checkpw(password.encode(), hashed.encode())
+    except Exception:
+        return False
+
+def _create_token(email: str, hours: int = 24) -> str:
+    payload = {
+        "sub": email,
+        "role": "admin",
+        "exp": datetime.now(timezone.utc) + timedelta(hours=hours),
+        "iat": datetime.now(timezone.utc),
+    }
+    return pyjwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+async def require_admin(request: Request) -> dict:
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        raise HTTPException(401, "Not authenticated")
+    token = auth[7:]
+    try:
+        payload = pyjwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+    except pyjwt.ExpiredSignatureError:
+        raise HTTPException(401, "Token expired")
+    except pyjwt.InvalidTokenError:
+        raise HTTPException(401, "Invalid token")
+    if payload.get("role") != "admin" or payload.get("sub", "").lower() != ADMIN_EMAIL:
+        raise HTTPException(403, "Admin only")
+    return payload
+
+class LoginBody(BaseModel):
+    email: str
+    password: str
+
+@api_router.post("/auth/login")
+async def auth_login(body: LoginBody):
+    email = (body.email or "").strip().lower()
+    if not ADMIN_EMAIL or email != ADMIN_EMAIL:
+        raise HTTPException(401, "Invalid credentials")
+    admin = await db.admin_user.find_one({"email": ADMIN_EMAIL})
+    if not admin or not _verify_password(body.password, admin.get("password_hash", "")):
+        raise HTTPException(401, "Invalid credentials")
+    token = _create_token(ADMIN_EMAIL)
+    return {"token": token, "email": ADMIN_EMAIL, "role": "admin", "expires_in": 24 * 3600}
+
+@api_router.get("/auth/me")
+async def auth_me(request: Request):
+    payload = await require_admin(request)
+    return {"email": payload["sub"], "role": payload.get("role", "admin")}
+
+async def seed_admin():
+    """Ensure the admin user exists and password matches env on every startup (idempotent)."""
+    if not ADMIN_EMAIL or not ADMIN_PASSWORD:
+        logging.warning("ADMIN_EMAIL/ADMIN_PASSWORD not set — admin login disabled")
+        return
+    existing = await db.admin_user.find_one({"email": ADMIN_EMAIL})
+    if not existing:
+        await db.admin_user.insert_one({
+            "email": ADMIN_EMAIL,
+            "password_hash": _hash_password(ADMIN_PASSWORD),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        })
+        logging.info("Admin seeded: %s", ADMIN_EMAIL)
+    elif not _verify_password(ADMIN_PASSWORD, existing["password_hash"]):
+        await db.admin_user.update_one(
+            {"email": ADMIN_EMAIL},
+            {"$set": {"password_hash": _hash_password(ADMIN_PASSWORD)}}
+        )
+        logging.info("Admin password rotated for %s", ADMIN_EMAIL)
 
 # ── Models ───────────────────────────────────────────────────────────────────
 class Subject(BaseModel):
@@ -214,14 +295,14 @@ async def get_subject(subject_id: str):
     return s
 
 @api_router.post("/subjects")
-async def create_subject(name: str = Form(...), semester: int = Form(...), credits: Optional[float] = Form(None)):
+async def create_subject(name: str = Form(...), semester: int = Form(...), credits: Optional[float] = Form(None), _admin: dict = Depends(require_admin)):
     order = await db.subjects.count_documents({"semester": semester})
     subj = Subject(name=name, semester=semester, order=order, credits=credits)
     await db.subjects.insert_one(subj.model_dump())
     return subj.model_dump()
 
 @api_router.delete("/subjects/{subject_id}")
-async def delete_subject(subject_id: str):
+async def delete_subject(subject_id: str, _admin: dict = Depends(require_admin)):
     await db.subjects.delete_one({"id": subject_id})
     await db.modules.delete_many({"subject_id": subject_id})
     await db.files.update_many({"subject_id": subject_id}, {"$set": {"is_deleted": True}})
@@ -233,14 +314,14 @@ async def list_modules(subject_id: str):
     return mods
 
 @api_router.post("/modules")
-async def create_module(subject_id: str = Form(...), name: str = Form(...)):
+async def create_module(subject_id: str = Form(...), name: str = Form(...), _admin: dict = Depends(require_admin)):
     order = await db.modules.count_documents({"subject_id": subject_id})
     mod = Module(subject_id=subject_id, name=name, order=order + 1)
     await db.modules.insert_one(mod.model_dump())
     return mod.model_dump()
 
 @api_router.delete("/modules/{module_id}")
-async def delete_module(module_id: str):
+async def delete_module(module_id: str, _admin: dict = Depends(require_admin)):
     await db.modules.delete_one({"id": module_id})
     await db.files.update_many({"module_id": module_id}, {"$set": {"is_deleted": True}})
     return {"ok": True}
@@ -267,6 +348,7 @@ async def upload_file(
     semester: Optional[int] = Form(None),
     pyq_type: Optional[str] = Form(None),
     resource_type: Optional[str] = Form(None),
+    _admin: dict = Depends(require_admin),
 ):
     ext = file.filename.split(".")[-1].lower() if "." in file.filename else "bin"
     file_id = str(uuid.uuid4())
@@ -324,14 +406,14 @@ async def get_file_meta(file_id: str):
     return f
 
 @api_router.patch("/files/{file_id}")
-async def rename_file(file_id: str, display_name: str = Form(...)):
+async def rename_file(file_id: str, display_name: str = Form(...), _admin: dict = Depends(require_admin)):
     r = await db.files.update_one({"id": file_id}, {"$set": {"display_name": display_name}})
     if r.matched_count == 0:
         raise HTTPException(404, "File not found")
     return {"ok": True}
 
 @api_router.delete("/files/{file_id}")
-async def delete_file(file_id: str):
+async def delete_file(file_id: str, _admin: dict = Depends(require_admin)):
     await db.files.update_one({"id": file_id}, {"$set": {"is_deleted": True}})
     return {"ok": True}
 
@@ -413,7 +495,8 @@ async def analytics_trending(limit: int = 8):
 @api_router.get("/resources")
 async def list_resources(resource_type: Optional[str] = None):
     q = {}
-    if resource_type: q["resource_type"] = resource_type
+    if resource_type:
+        q["resource_type"] = resource_type
     r = await db.resources.find(q, {"_id": 0}).sort("created_at", -1).to_list(500)
     return r
 
@@ -423,13 +506,14 @@ async def create_resource(
     url: str = Form(...),
     resource_type: str = Form(...),
     description: Optional[str] = Form(""),
+    _admin: dict = Depends(require_admin),
 ):
     res = ResourceLink(title=title, url=url, description=description or "", resource_type=resource_type)
     await db.resources.insert_one(res.model_dump())
     return res.model_dump()
 
 @api_router.delete("/resources/{resource_id}")
-async def delete_resource(resource_id: str):
+async def delete_resource(resource_id: str, _admin: dict = Depends(require_admin)):
     await db.resources.delete_one({"id": resource_id})
     return {"ok": True}
 
@@ -453,6 +537,7 @@ async def startup():
         logger.info("Storage initialized")
     except Exception as e:
         logger.warning(f"Storage init deferred: {e}")
+    await seed_admin()
     await seed_if_empty()
 
 @app.on_event("shutdown")
