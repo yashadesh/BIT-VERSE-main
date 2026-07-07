@@ -74,7 +74,7 @@ export default function Footer() {
           <p className="mt-4 text-sm text-[#B0B8C5] max-w-md leading-relaxed">
             A student-driven digital notes library exclusively for First Year students of
             Birla Institute of Technology, Mesra. Notes, PYQs, syllabi, tutorials and
-            YouTube playlists — all in one beautiful place.
+            subject-wise books — all in one beautiful place.
           </p>
         </div>
         <div>

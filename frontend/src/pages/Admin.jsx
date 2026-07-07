@@ -55,7 +55,7 @@ export default function Admin() {
       <PageHeader
         chip="Admin Dashboard"
         title={<>Manage the <span className="text-[#00E5D4]">library</span></>}
-        subtitle="Upload files, add subjects & modules, and curate YouTube playlists. Open access — no login."
+        subtitle="Upload files, add subjects & modules, and curate books & subject material. Open access — no login."
         testid="admin-header"
       />
 
@@ -343,10 +343,6 @@ function UploadSyllabus({ refresh }) {
       </form>
     </GlassBox>
   );
-}
-
-function AddYouTubePlaylist({ refresh }) {
-  return null;
 }
 
 function UploadBookFile({ subjects, refresh }) {
