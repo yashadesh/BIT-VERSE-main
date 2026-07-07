@@ -1,0 +1,29 @@
+services:
+  # 1. Your FastAPI Backend Service
+  - type: web
+    name: bitverse-backend
+    env: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn server:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.0
+
+  # 2. Your React Frontend Static Site
+  - type: static
+    name: bitverse-frontend
+    env: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    publishDir: dist # Change to 'build' if your React app uses Create-React-App instead of Vite
+    envVars:
+      - key: REACT_APP_API_URL
+        fromService:
+          type: web
+          name: bitverse-backend
+          property: url
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
