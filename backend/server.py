@@ -18,6 +18,16 @@ from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 from datetime import datetime, timezone, timedelta
+import os
+import cloudinary
+import cloudinary.uploader
+
+# Hooking up your Render dashboard secret environment variables
+cloudinary.config(
+    cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.environ.get("CLOUDINARY_API_KEY"),
+    api_secret=os.environ.get("CLOUDINARY_API_SECRET")
+)
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -382,17 +392,23 @@ async def upload_file(
 ):
     ext = file.filename.split(".")[-1].lower() if "." in file.filename else "bin"
     file_id = str(uuid.uuid4())
-    path = f"{APP_NAME}/{category}/{file_id}.{ext}"
-    data = await file.read()
+    # Upload directly to cloud storage stream
+    upload_result = cloudinary.uploader.upload(
+        file.file, 
+        resource_type="raw",
+        public_id=f"bitverse/{category}/{file_id}.{ext}"
+    )
+    
+    # This is your new permanent internet link string
+    file_url = upload_result.get("secure_url")
     ct = file.content_type or _guess_mime(file.filename)
-    result = put_object(path, data, ct)
     doc = FileDoc(
-        id=file_id,
-        storage_path=result["path"],
-        original_filename=file.filename,
-        display_name=display_name or file.filename,
-        content_type=ct,
-        size=result.get("size", len(data)),
+    id=file_id,
+    storage_path=file_url,  # Saves your permanent cloud link
+    original_filename=file.filename,
+    display_name=display_name or file.filename,
+    content_type=ct,
+    size=upload_result.get("bytes", 0),  # Gets the exact file size from Cloudinary
         category=category,
         subject_id=subject_id,
         module_id=module_id,
