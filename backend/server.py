@@ -610,3 +610,6 @@ async def startup():
 @app.on_event("shutdown")
 async def shutdown():
     client.close()
+@app.get("/")
+async def render_health_check():
+    return {"status": "healthy", "message": "BITVERSE Backend API is live"}
